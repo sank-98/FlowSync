@@ -1,0 +1,53 @@
+version: 1
+sonarqube:
+  server:
+    url: ${SONAR_HOST_URL:-https://sonarcloud.io}
+    tokenEnvVar: SONAR_TOKEN
+  project:
+    key: sank-98_FlowSync
+    name: FlowSync
+    organization: sank-98
+    language: javascript
+  qualityGates:
+    required: true
+    failPipelineOnQualityGateFailure: true
+    conditions:
+      - metric: new_security_rating
+        operator: GREATER_THAN
+        error: 1
+      - metric: new_reliability_rating
+        operator: GREATER_THAN
+        error: 1
+      - metric: new_maintainability_rating
+        operator: GREATER_THAN
+        error: 1
+      - metric: new_coverage
+        operator: LESS_THAN
+        error: 80
+      - metric: duplicated_lines_density
+        operator: GREATER_THAN
+        error: 3
+  security:
+    standards:
+      - OWASP_TOP_10
+      - CWE_TOP_25
+      - SANS_TOP_25
+    enforceHotspotsReview: true
+    failOnNewVulnerabilities: true
+  coverage:
+    minimum: 80
+    reportPaths:
+      - coverage/lcov.info
+      - coverage/coverage-final.json
+  qualityProfiles:
+    javascript: Sonar way
+  ciIntegration:
+    provider: github-actions
+    workflowPath: .github/workflows/deploy-pipeline.yml
+  customMetrics:
+    - name: api-response-p95-ms
+      source: performance/benchmark-dashboard.js
+      targetMax: 250
+    - name: critical-vulnerabilities
+      source: SECURITY_AUDIT_REPORT.md
+      targetMax: 0

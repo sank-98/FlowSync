@@ -1,0 +1,12 @@
+version: v1.25.0
+ignore: {}
+patch: {}
+language-settings:
+  javascript:
+    packageManager: npm
+rules:
+  severity-threshold: high
+  fail-on: upgradable
+metadata:
+  owner: sank-98
+  repository: FlowSync

@@ -1,0 +1,43 @@
+{
+  "version": "1.0",
+  "organization": {
+    "name": "sank-98",
+    "slug": "sank-98",
+    "project": "FlowSync"
+  },
+  "scans": {
+    "dependencies": {
+      "enabled": true,
+      "failOn": "upgradable",
+      "severityThreshold": "high"
+    },
+    "sast": {
+      "enabled": true,
+      "languages": ["javascript"]
+    },
+    "container": {
+      "enabled": true,
+      "dockerfile": "Dockerfile",
+      "image": "flowsync:latest"
+    },
+    "licenseCompliance": {
+      "enabled": true,
+      "deny": ["GPL-3.0", "AGPL-3.0"],
+      "warn": ["LGPL-3.0"]
+    }
+  },
+  "remediation": {
+    "autoFix": false,
+    "priority": ["critical", "high", "medium", "low"],
+    "slaDays": {
+      "critical": 7,
+      "high": 14,
+      "medium": 30,
+      "low": 60
+    }
+  },
+  "reporting": {
+    "format": "sarif",
+    "output": "reports/snyk.sarif"
+  }
+}

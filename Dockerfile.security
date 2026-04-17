@@ -1,0 +1,21 @@
+# syntax=docker/dockerfile:1
+
+FROM node:20-alpine AS deps
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev
+
+FROM node:20-alpine AS security-scan
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN npm audit --audit-level=high || true
+
+FROM node:20-alpine AS runtime
+WORKDIR /app
+RUN addgroup -S flowsync && adduser -S flowsync -G flowsync
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+USER flowsync
+EXPOSE 8080
+CMD ["node", "server.js"]

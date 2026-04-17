@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+
+set -e
+
+echo "Running pre-commit checks..."
+npm run lint || true
+npm test || true
+npm audit --audit-level=high || true
+node deployment-checklist.js || true

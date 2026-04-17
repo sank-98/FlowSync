@@ -1,0 +1,19 @@
+{
+  "kpis": {
+    "availability": "99.9%",
+    "p95LatencyMs": 250,
+    "errorRatePct": 1,
+    "deploymentSuccessRatePct": 98
+  },
+  "metrics": {
+    "performance": ["response_time_p95", "throughput_rps", "cpu_usage_pct", "memory_usage_mb"],
+    "quality": ["test_coverage_pct", "lint_issues", "code_smells"],
+    "security": ["critical_vulns", "high_vulns", "sast_findings", "dependency_risk_score"],
+    "userExperience": ["apdex", "frontend_load_time_ms", "client_error_rate_pct"]
+  },
+  "reportingCadence": {
+    "weekly": true,
+    "monthly": true,
+    "quarterly": true
+  }
+}

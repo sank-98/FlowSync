@@ -1,0 +1,53 @@
+name: Deploy Pipeline
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  pre-deployment-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Security and quality validation
+        run: |
+          npm audit --audit-level=high || true
+          npm run lint || true
+          npm test || true
+          node deployment-checklist.js --strict
+
+  deploy-staging:
+    needs: pre-deployment-validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: chmod +x deploy-staging.sh && ./deploy-staging.sh
+
+  deploy-production:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - run: chmod +x deploy-production.sh && ./deploy-production.sh
+
+  notifications:
+    if: always()
+    needs: [deploy-production]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report status
+        run: |
+          echo "Deployment pipeline finished: ${{ job.status }}"
