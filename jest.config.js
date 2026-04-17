@@ -5,6 +5,7 @@ module.exports = {
   testPathIgnorePatterns: ['/node_modules/', '<rootDir>/tests/load.test.js'],
   collectCoverageFrom: ['server.js', 'middleware/**/*.js', 'services/**/*.js', 'public/*.js'],
   coverageReporters: ['text', 'lcov', 'json-summary'],
+  // Baseline thresholds aligned to current repository coverage; can be raised incrementally.
   coverageThreshold: {
     global: {
       branches: 20,

@@ -14,7 +14,7 @@
   "ignorePatterns": ["node_modules/", "*.png", "*.log"],
   "rules": {
     "no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
-    "complexity": ["error", 80],
+    "complexity": ["error", 20],
     "no-implicit-coercion": "error"
   }
 }
