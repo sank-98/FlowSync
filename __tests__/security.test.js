@@ -40,22 +40,22 @@ describe('Security hardening middleware', () => {
       fromZoneId: 'outer-1',
       destinationType: 'bad-destination',
       preference: 'balanced',
-    });
+    }).set('Origin', 'http://127.0.0.1');
 
     expect(response.status).toBe(400);
     expect(response.body.error).toContain('Invalid destinationType');
   });
 
   test('requires API token for protected control endpoint', async () => {
-    const response = await request(app).post('/api/reset').send({});
+    const response = await request(app).post('/api/reset').set('Origin', 'http://127.0.0.1').send({});
     expect(response.status).toBe(401);
   });
 
   test('enforces rate limiting', async () => {
     for (let index = 0; index < 10; index += 1) {
-      await request(app).get('/api/dashboard');
+      await request(app).get('/api/dashboard').set('X-Forwarded-For', '198.51.100.10');
     }
-    const response = await request(app).get('/api/dashboard');
+    const response = await request(app).get('/api/dashboard').set('X-Forwarded-For', '198.51.100.10');
     expect(response.status).toBe(429);
   });
 });

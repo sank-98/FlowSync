@@ -4,7 +4,6 @@
 // ================================================================
 
 const _API_BASE = window.location.origin;
-const _IS_GITHUB_PAGES = window.location.hostname.includes('github.io');
 
 // -------------------- STATE --------------------
 const state = {
@@ -30,7 +29,10 @@ const state = {
 function announceForScreenReader(message) {
   const announcer = document.getElementById('sr-announcer');
   if (!announcer) return;
-  announcer.textContent = message;
+  announcer.textContent = '';
+  window.setTimeout(() => {
+    announcer.textContent = message;
+  }, 30);
 }
 
 // -------------------- COLORS --------------------
@@ -922,7 +924,7 @@ async function refreshDashboard() {
       state.simulationTime += 1.5;
       
       // Simulate density changes
-      state.zones.forEach((zone, _idx) => {
+      state.zones.forEach((zone) => {
         zone.prev_density = zone.density;
         const neighborAvg = zone.neighbors.length 
           ? zone.neighbors.reduce((s, nId) => {

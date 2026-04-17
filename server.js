@@ -2,7 +2,6 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
-const crypto = require('crypto');
 const admin = require('firebase-admin');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
@@ -12,10 +11,22 @@ const app = express();
 const PORT = Number(process.env.PORT || 8080);
 const RATE_LIMIT_WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS || 60_000);
 const RATE_LIMIT_MAX_REQUESTS = Number(process.env.RATE_LIMIT_MAX_REQUESTS || 120);
+const RATE_LIMIT_CLEANUP_INTERVAL_MS = Number(process.env.RATE_LIMIT_CLEANUP_INTERVAL_MS || 60_000);
+const MAX_ROUTE_LENGTH = 25;
+const MAX_CHAT_MESSAGE_LENGTH = 500;
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 const DESTINATION_TYPES = new Set(['food', 'restroom', 'exit', 'lounge', 'medical']);
 const PREFERENCE_TYPES = new Set(['balanced', 'fastest', 'least_crowded', 'accessible']);
 const requestBuckets = new Map();
+
+const _rateLimitCleanupInterval = setInterval(() => {
+  const now = Date.now();
+  for (const [key, bucket] of requestBuckets.entries()) {
+    if (bucket.resetAt <= now) {
+      requestBuckets.delete(key);
+    }
+  }
+}, RATE_LIMIT_CLEANUP_INTERVAL_MS).unref();
 
 app.use(cors());
 app.set('trust proxy', 1);
@@ -62,7 +73,7 @@ app.use((req, res, next) => {
 
 app.use((req, res, next) => {
   const now = Date.now();
-  const key = req.ip || req.connection.remoteAddress || 'unknown';
+  const key = req.ip || req.socket.remoteAddress || 'unknown';
   const bucket = requestBuckets.get(key) || { count: 0, resetAt: now + RATE_LIMIT_WINDOW_MS };
 
   if (bucket.resetAt <= now) {
@@ -89,13 +100,20 @@ app.use(express.json({ limit: '100kb' }));
 function sanitizeValue(value) {
   if (typeof value === 'string') {
     return value
-      .replace(/<[^>]*>/g, '')
+      .replace(/[<>]/g, '')
       .replace(/[\u0000-\u001F\u007F]/g, '')
       .trim();
   }
   if (Array.isArray(value)) return value.map(sanitizeValue);
   if (value && typeof value === 'object') {
-    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, sanitizeValue(v)]));
+    const sanitized = Object.create(null);
+    Object.entries(value)
+      .filter(([key]) => key !== '__proto__' && key !== 'constructor' && key !== 'prototype')
+      .forEach(([key, nestedValue]) => {
+        const safeKey = key.replace(/[^a-zA-Z0-9_.-]/g, '');
+        if (safeKey) sanitized[safeKey] = sanitizeValue(nestedValue);
+      });
+    return sanitized;
   }
   return value;
 }
@@ -130,28 +148,24 @@ app.use((req, res, next) => {
 
   const origin = req.headers.origin;
   const referer = req.headers.referer;
-  const host = req.headers.host;
+  const requestHost = req.hostname;
 
-  if (!origin && !referer) return next();
+  if (!origin && !referer) {
+    return res.status(403).json({ error: 'CSRF validation failed' });
+  }
 
   const source = origin || referer;
   let sourceHost = '';
   try {
-    sourceHost = new URL(source).host;
+    sourceHost = new URL(source).hostname;
   } catch (_err) {
     return res.status(403).json({ error: 'Invalid request origin' });
   }
 
-  if (sourceHost !== host) {
+  if (sourceHost !== requestHost) {
     return res.status(403).json({ error: 'CSRF validation failed' });
   }
 
-  return next();
-});
-
-app.use((req, res, next) => {
-  const csrfToken = crypto.randomBytes(16).toString('hex');
-  res.setHeader('X-CSRF-Token', csrfToken);
   return next();
 });
 
@@ -997,8 +1011,14 @@ app.post('/api/time-analysis', (req, res) => {
   if (!route || !Array.isArray(route)) {
     return res.status(400).json({ error: 'Invalid route format' });
   }
-  if (route.length < 2 || route.length > 25 || route.some((zoneId) => typeof zoneId !== 'string')) {
-    return res.status(400).json({ error: 'Route payload is out of bounds' });
+  if (route.length < 2) {
+    return res.status(400).json({ error: 'Route must contain at least 2 zones' });
+  }
+  if (route.length > MAX_ROUTE_LENGTH) {
+    return res.status(400).json({ error: `Route exceeds max length of ${MAX_ROUTE_LENGTH}` });
+  }
+  if (route.some((zoneId) => typeof zoneId !== 'string')) {
+    return res.status(400).json({ error: 'Route contains non-string zone IDs' });
   }
 
   return res.json(analyzeTimeOptions(route));
@@ -1012,8 +1032,8 @@ app.post('/api/ai-chat', async (req, res) => {
   if (!req.body.message) {
     return res.status(400).json({ error: 'Message is required' });
   }
-  if (typeof req.body.message !== 'string' || req.body.message.length > 500) {
-    return res.status(400).json({ error: 'Message must be a string up to 500 chars' });
+  if (typeof req.body.message !== 'string' || req.body.message.length > MAX_CHAT_MESSAGE_LENGTH) {
+    return res.status(400).json({ error: `Message must be a string up to ${MAX_CHAT_MESSAGE_LENGTH} chars` });
   }
 
   const response = await getAIResponse(req.body.message);
@@ -1040,6 +1060,9 @@ app.get('/api/stats', (req, res) => {
 app.post('/api/simulation', requireApiAuth, (req, res) => {
   if (!Object.prototype.hasOwnProperty.call(req.body, 'running')) {
     return res.status(400).json({ error: 'running flag is required' });
+  }
+  if (typeof req.body.running !== 'boolean') {
+    return res.status(400).json({ error: 'running flag must be boolean' });
   }
   isSimulationRunning = Boolean(req.body.running);
   res.json({
