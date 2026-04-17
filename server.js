@@ -13,13 +13,18 @@ const {
 } = require('./middleware/request-validator');
 const { trackPerformance } = require('./config/performance-monitoring');
 const cacheManager = require('./services/cache-manager');
-const healthRouter = require('./routes/health-check');
+const { createGoogleServices } = require('./config/cloud-services');
+const { createHealthRouter } = require('./routes/health-check');
+const { createStorageRouter } = require('./routes/storage');
+const { createTasksRouter } = require('./routes/tasks');
+const { createEventsRouter } = require('./routes/events');
 const apiRouter = require('./routes/api');
 
 dotenv.config();
 
 const app = express();
 const PORT = Number(process.env.PORT || 8080);
+const googleServices = createGoogleServices();
 
 if (securityConfig.trustProxy) {
   app.set('trust proxy', 1);
@@ -29,9 +34,20 @@ app.use(express.urlencoded({ extended: true, limit: securityConfig.request.maxUr
 applySecurity(app);
 app.use(trackPerformance);
 app.use(express.static(path.join(__dirname, 'public')));
-
+app.use(googleServices.cloudLogger.requestLoggingMiddleware);
 app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  res.on('finish', () => {
+    const durationMs = Number(req.responseTimeMs || 0);
+    googleServices.cloudMonitoring
+      .recordAPILatency(req.path, durationMs)
+      .catch((error) => googleServices.cloudLogger.logWarning('cloud monitoring latency write failed', { error: error.message }));
+
+    if (res.statusCode >= 400) {
+      googleServices.cloudMonitoring
+        .recordErrorRate(req.path, 1)
+        .catch((error) => googleServices.cloudLogger.logWarning('cloud monitoring error metric failed', { error: error.message }));
+    }
+  });
   next();
 });
 
@@ -48,9 +64,9 @@ try {
   });
 
   db = admin.firestore();
-  console.log('Firebase initialized');
+  googleServices.cloudLogger.logInfo('Firebase initialized');
 } catch (error) {
-  console.warn('Firebase initialization warning:', error.message);
+  googleServices.cloudLogger.logWarning('Firebase initialization warning', { error: error.message });
 }
 
 let model = null;
@@ -59,12 +75,12 @@ try {
   if (process.env.GOOGLE_GEMINI_API_KEY) {
     const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY);
     model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-    console.log('Gemini initialized');
+    googleServices.cloudLogger.logInfo('Gemini initialized');
   } else {
-    console.warn('Gemini API key not found');
+    googleServices.cloudLogger.logWarning('Gemini API key not found');
   }
 } catch (error) {
-  console.warn('Gemini initialization warning:', error.message);
+  googleServices.cloudLogger.logWarning('Gemini initialization warning', { error: error.message });
 }
 
 const SIMULATION_CONFIG = {
@@ -296,6 +312,15 @@ function updateSimulation() {
   });
 
   lastAnomalies = detectAnomalies();
+  if (lastAnomalies.length > 0) {
+    googleServices.pubSubService
+      .publishMessage('anomaly-detection', {
+        count: lastAnomalies.length,
+        topSeverity: lastAnomalies[0].severity,
+        timestamp: new Date().toISOString(),
+      })
+      .catch((error) => googleServices.cloudLogger.logWarning('anomaly pubsub publish failed', { error: error.message }));
+  }
 
   zones.forEach((zone) => {
     const anomaly = lastAnomalies.find((candidate) => candidate.zoneId === zone.id) || null;
@@ -747,7 +772,7 @@ async function getAIResponse(userQuery) {
     const response = await result.response;
     return response.text();
   } catch (error) {
-    console.warn('Gemini request failed:', error.message);
+    googleServices.cloudLogger.logWarning('Gemini request failed', { error: error.message });
     return generateContextualFallback(userQuery);
   }
 }
@@ -761,8 +786,34 @@ app.get('/health', (req, res) => {
   });
 });
 
-app.use('/health-check', healthRouter);
+app.use('/health-check', createHealthRouter(googleServices));
+app.get('/health/services', async (_req, res) => {
+  const checks = await Promise.all([
+    googleServices.storageService.healthCheck(),
+    googleServices.tasksService.healthCheck(),
+    Promise.resolve({ connected: googleServices.pubSubService.isEnabled() }),
+    Promise.resolve({ connected: googleServices.cloudMonitoring.isCloudMonitoringEnabled() }),
+    Promise.resolve({ connected: googleServices.cloudLogger.isCloudLoggingEnabled() }),
+  ]);
+
+  const services = {
+    cloudStorage: checks[0],
+    cloudTasks: checks[1],
+    cloudPubSub: checks[2],
+    cloudMonitoring: checks[3],
+    cloudLogging: checks[4],
+  };
+  const healthy = Object.values(services).every((item) => item.connected === true);
+  res.status(healthy ? 200 : 503).json({
+    status: healthy ? 'healthy' : 'degraded',
+    lastHealthCheck: new Date().toISOString(),
+    services,
+  });
+});
 app.use('/api/base', apiRouter);
+app.use('/api/storage', createStorageRouter(googleServices.storageService));
+app.use('/api/tasks', createTasksRouter(googleServices.tasksService));
+app.use('/api/events', createEventsRouter(googleServices.pubSubService));
 
 app.get('/api/zones', (req, res) => {
   res.json({
@@ -843,6 +894,15 @@ app.post('/api/route', validateRouteRequest, validationErrorHandler, (req, res) 
   const routeDetails = routingResult.route.map((zoneId) => getZone(zoneId));
   const estimatedTime = calculateEstimatedTime(routingResult.route, false);
   const futureTime = calculateEstimatedTime(routingResult.route, true);
+  googleServices.pubSubService
+    .publishMessage('user-routes', {
+      fromZoneId,
+      destinationType,
+      routeLength: routingResult.route.length,
+      confidence: routingResult.confidence,
+      timestamp: new Date().toISOString(),
+    })
+    .catch((error) => googleServices.cloudLogger.logWarning('route pubsub publish failed', { error: error.message }));
 
   return res.json({
     route: routingResult.route,
@@ -880,6 +940,22 @@ app.post('/api/ai-chat', validateChatRequest, validationErrorHandler, async (req
 
 app.get('/api/stats', (req, res) => {
   const dashboard = buildDashboard();
+  googleServices.cloudMonitoring
+    .recordMetric(
+      'custom.googleapis.com/crowdflow/zones_in_critical',
+      dashboard.stats.highPressureZones
+    )
+    .catch((error) => googleServices.cloudLogger.logWarning('cloud monitoring metric write failed', { error: error.message }));
+
+  googleServices.pubSubService
+    .publishMessage('metrics-export', {
+      overallDensity: dashboard.stats.overallDensity,
+      predictedDensity: dashboard.stats.predictedDensity,
+      highPressureZones: dashboard.stats.highPressureZones,
+      timestamp: new Date().toISOString(),
+    })
+    .catch((error) => googleServices.cloudLogger.logWarning('metrics pubsub publish failed', { error: error.message }));
+
   res.json({
     overallDensity: dashboard.stats.overallDensity,
     predictedDensity: dashboard.stats.predictedDensity,
@@ -930,7 +1006,7 @@ app.use((req, res) => {
 });
 
 app.use((err, req, res, _next) => {
-  console.error('Unhandled error:', err);
+  googleServices.cloudLogger.logError('Unhandled error', err, { path: req.path, method: req.method });
   res.status(500).json({ error: 'Internal server error' });
 });
 
@@ -942,7 +1018,7 @@ function start() {
   }, SIMULATION_CONFIG.updateInterval);
 
   return app.listen(PORT, () => {
-    console.log(`FlowSync live at http://localhost:${PORT}`);
+    googleServices.cloudLogger.logInfo(`FlowSync live at http://localhost:${PORT}`);
   });
 }
 
@@ -950,4 +1026,4 @@ if (require.main === module) {
   start();
 }
 
-module.exports = { app, start, initializeStadium };
+module.exports = { app, start, initializeStadium, googleServices };
