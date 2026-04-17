@@ -8,6 +8,7 @@ const DEFAULT_TOPICS = [
   'metrics-export',
   'simulation-updates',
 ];
+const MAX_MESSAGE_HISTORY = 100;
 
 class CloudPubSubService {
   constructor(options = {}) {
@@ -30,7 +31,7 @@ class CloudPubSubService {
       publishedAt: new Date().toISOString(),
     };
     current.push(entry);
-    this.messageHistory.set(topicName, current.slice(-100));
+    this.messageHistory.set(topicName, current.slice(-MAX_MESSAGE_HISTORY));
     return entry.messageId;
   }
 
