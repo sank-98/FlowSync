@@ -1,0 +1,7 @@
+{
+  "projectId": "${GOOGLE_CLOUD_PROJECT}",
+  "region": "${GOOGLE_CLOUD_REGION}",
+  "firestoreCollection": "flowsyncEvents",
+  "storageBucket": "${GCS_BUCKET_NAME}",
+  "monitoringNamespace": "custom.googleapis.com/flowsync"
+}

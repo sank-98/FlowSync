@@ -4,7 +4,19 @@
 // ================================================================
 
 const _API_BASE = window.location.origin;
-const IS_GITHUB_PAGES = window.location.hostname.includes('github.io');
+
+function sanitizeText(text) {
+  if (window.FlowSyncSecurity?.sanitizeText) {
+    return window.FlowSyncSecurity.sanitizeText(text);
+  }
+  return String(text).replace(/[<>&'"]/g, '');
+}
+
+function announceA11y(message) {
+  if (window.FlowSyncA11y?.announce) {
+    window.FlowSyncA11y.announce(message);
+  }
+}
 
 // -------------------- STATE --------------------
 const state = {
@@ -754,9 +766,10 @@ function addChatMessage(role, message) {
   
   const bubble = document.createElement('div');
   bubble.className = `chat-bubble ${role}`;
-  bubble.innerHTML = message;
+  bubble.innerHTML = sanitizeText(message).replace(/\\n/g, '<br>');
   container.appendChild(bubble);
   container.scrollTop = container.scrollHeight;
+  announceA11y(`${role} message added`);
 }
 
 async function handleChatSubmit() {
@@ -889,7 +902,7 @@ async function refreshDashboard() {
       state.simulationTime += 1.5;
       
       // Simulate density changes
-      state.zones.forEach((zone, idx) => {
+      state.zones.forEach((zone) => {
         zone.prev_density = zone.density;
         const neighborAvg = zone.neighbors.length 
           ? zone.neighbors.reduce((s, nId) => {
@@ -910,7 +923,8 @@ async function refreshDashboard() {
       });
     }
 
-    await Promise.all([fetchDashboard(), fetchZones()]);
+    await fetchZones();
+    await fetchDashboard();
     populateZoneDropdown(state.zones);
     renderMetrics();
     renderAnomalies();
@@ -983,10 +997,24 @@ function setupEventListeners() {
   setupMapToggles();
   setupTimeSlider();
   setupWhatIf();
+
+  document.querySelectorAll('.map-badge').forEach((badge) => {
+    badge.setAttribute('tabindex', '0');
+    badge.setAttribute('role', 'button');
+    badge.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        badge.click();
+      }
+    });
+  });
 }
 
 // -------------------- INITIALIZATION --------------------
 async function init() {
+  if (window.FlowSyncA11y?.setupKeyboardShortcuts) {
+    window.FlowSyncA11y.setupKeyboardShortcuts();
+  }
   setupEventListeners();
   renderRoutePanel();
 

@@ -23,3 +23,5 @@ dist/
 build/
 tmp/
 temp/
+cypress/videos/
+cypress/screenshots/

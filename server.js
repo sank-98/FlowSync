@@ -1,17 +1,33 @@
 const express = require('express');
-const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
 const admin = require('firebase-admin');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+require('express-async-errors');
+const securityConfig = require('./config/security-config');
+const { applySecurity } = require('./middleware/security');
+const {
+  validateRouteRequest,
+  validateChatRequest,
+  validationErrorHandler,
+} = require('./middleware/request-validator');
+const { trackPerformance } = require('./config/performance-monitoring');
+const cacheManager = require('./services/cache-manager');
+const healthRouter = require('./routes/health-check');
+const apiRouter = require('./routes/api');
 
 dotenv.config();
 
 const app = express();
 const PORT = Number(process.env.PORT || 8080);
 
-app.use(cors());
-app.use(express.json());
+if (securityConfig.trustProxy) {
+  app.set('trust proxy', 1);
+}
+app.use(express.json({ limit: securityConfig.request.maxJsonSize }));
+app.use(express.urlencoded({ extended: true, limit: securityConfig.request.maxUrlEncodedSize }));
+applySecurity(app);
+app.use(trackPerformance);
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use((req, res, next) => {
@@ -745,6 +761,9 @@ app.get('/health', (req, res) => {
   });
 });
 
+app.use('/health-check', healthRouter);
+app.use('/api/base', apiRouter);
+
 app.get('/api/zones', (req, res) => {
   res.json({
     zones,
@@ -777,7 +796,14 @@ app.get('/api/anomalies', (req, res) => {
 });
 
 app.get('/api/dashboard', (req, res) => {
-  res.json(buildDashboard());
+  const cacheKey = 'dashboard';
+  const cached = cacheManager.get(cacheKey);
+  if (cached) {
+    return res.json(cached);
+  }
+  const dashboard = buildDashboard();
+  cacheManager.set(cacheKey, dashboard);
+  return res.json(dashboard);
 });
 
 app.get('/api/zones/:id', (req, res) => {
@@ -799,7 +825,7 @@ app.get('/api/zones/:id', (req, res) => {
   });
 });
 
-app.post('/api/route', (req, res) => {
+app.post('/api/route', validateRouteRequest, validationErrorHandler, (req, res) => {
   const { fromZoneId, destinationType, preference } = req.body;
 
   if (!fromZoneId || !destinationType) {
@@ -844,11 +870,7 @@ app.get('/api/exit-strategy', (req, res) => {
   res.json(getExitStrategy());
 });
 
-app.post('/api/ai-chat', async (req, res) => {
-  if (!req.body.message) {
-    return res.status(400).json({ error: 'Message is required' });
-  }
-
+app.post('/api/ai-chat', validateChatRequest, validationErrorHandler, async (req, res) => {
   const response = await getAIResponse(req.body.message);
   return res.json({
     response,
