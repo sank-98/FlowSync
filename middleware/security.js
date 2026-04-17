@@ -66,7 +66,15 @@ function applySecurity(app) {
       },
     })
   );
-  app.use(cors({ origin: securityConfig.cors.origin }));
+  app.use(
+    cors({
+      origin(origin, callback) {
+        if (!origin) return callback(null, true);
+        if (securityConfig.cors.origin.includes(origin)) return callback(null, true);
+        return callback(new Error('CORS origin not allowed'));
+      },
+    })
+  );
   app.use(compression());
   app.use(generalLimiter);
   app.use(ensureCsrfToken);

@@ -1,5 +1,7 @@
 name: Performance
 on: [push, pull_request]
+permissions:
+  contents: read
 jobs:
   perf:
     runs-on: ubuntu-latest

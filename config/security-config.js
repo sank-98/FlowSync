@@ -12,7 +12,10 @@ module.exports = {
     secret: process.env.CSRF_SECRET || 'flowsync-dev-csrf-secret',
   },
   cors: {
-    origin: process.env.CORS_ORIGIN || '*',
+    origin: (process.env.CORS_ORIGIN || 'http://localhost:8080')
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean),
   },
   rateLimit: {
     windowMs: toNumber(process.env.RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000),

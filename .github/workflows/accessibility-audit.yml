@@ -1,5 +1,7 @@
 name: Accessibility Audit
 on: [push, pull_request]
+permissions:
+  contents: read
 jobs:
   a11y:
     runs-on: ubuntu-latest
