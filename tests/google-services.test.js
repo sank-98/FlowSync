@@ -177,4 +177,23 @@ describe('google cloud services integration', () => {
     expect(messages.length).toBe(1);
     expect(messages[0].payload.latency).toBe(42);
   });
+
+  it('acknowledges and nacks pubsub messages through helper methods', () => {
+    const pubSubService = new CloudPubSubService({ enabled: false });
+    const ack = jest.fn();
+    const nack = jest.fn();
+
+    expect(pubSubService.acknowledgeMessage({ ack })).toBe(true);
+    expect(ack).toHaveBeenCalledTimes(1);
+
+    const handled = pubSubService.handleMessageError(new Error('failed'), { nack });
+    expect(handled).toEqual({ handled: true, error: 'failed' });
+    expect(nack).toHaveBeenCalledTimes(1);
+
+    expect(pubSubService.acknowledgeMessage({})).toBe(false);
+    expect(pubSubService.handleMessageError(new Error('fallback'))).toEqual({
+      handled: true,
+      error: 'fallback',
+    });
+  });
 });

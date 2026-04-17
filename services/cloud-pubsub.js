@@ -57,12 +57,11 @@ class CloudPubSubService {
 
     const subscriptionName = `${topicName}-flowsync`;
     const topic = this.pubsub.topic(topicName);
-    if (this.subscriptionPool.has(subscriptionName)) {
-      return { topicName, subscriptionName };
+    let subscription = this.subscriptionPool.get(subscriptionName);
+    if (!subscription) {
+      [subscription] = await topic.subscription(subscriptionName).get({ autoCreate: true });
+      this.subscriptionPool.set(subscriptionName, subscription);
     }
-
-    const [subscription] = await topic.subscription(subscriptionName).get({ autoCreate: true });
-    this.subscriptionPool.set(subscriptionName, subscription);
 
     subscription.on('message', async (message) => {
       try {
