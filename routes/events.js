@@ -46,6 +46,15 @@ function createEventsRouter(pubSubService) {
     }
   });
 
+  router.get('/messages/:topic', async (req, res, next) => {
+    try {
+      const messages = await pubSubService.getMessages(req.params.topic);
+      return res.json({ topic: req.params.topic, messages, count: messages.length });
+    } catch (error) {
+      return next(error);
+    }
+  });
+
   return router;
 }
 

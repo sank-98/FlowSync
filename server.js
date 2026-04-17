@@ -788,6 +788,7 @@ app.get('/health', (req, res) => {
 
 app.use('/health-check', createHealthRouter(googleServices));
 app.get('/health/services', async (_req, res) => {
+  const lastCheck = new Date().toISOString();
   const checks = await Promise.all([
     googleServices.storageService.healthCheck(),
     googleServices.tasksService.healthCheck(),
@@ -797,16 +798,17 @@ app.get('/health/services', async (_req, res) => {
   ]);
 
   const services = {
-    cloudStorage: checks[0],
-    cloudTasks: checks[1],
-    cloudPubSub: checks[2],
-    cloudMonitoring: checks[3],
-    cloudLogging: checks[4],
+    storage: checks[0],
+    tasks: checks[1],
+    pubsub: checks[2],
+    monitoring: checks[3],
+    logging: checks[4],
   };
   const healthy = Object.values(services).every((item) => item.connected === true);
   res.status(healthy ? 200 : 503).json({
     status: healthy ? 'healthy' : 'degraded',
-    lastHealthCheck: new Date().toISOString(),
+    timestamp: new Date().toISOString(),
+    lastCheck,
     services,
   });
 });
