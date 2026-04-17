@@ -19,6 +19,7 @@ class CloudPubSubService {
     this.fallbackBus = new EventEmitter();
     this.messageHistory = new Map();
     this.subscriptionPool = new Map();
+    this.subscriptionInits = new Map();
   }
 
   addToHistory(topicName, payload, attributes = {}, messageId) {
@@ -60,8 +61,18 @@ class CloudPubSubService {
     const topic = this.pubsub.topic(topicName);
     let subscription = this.subscriptionPool.get(subscriptionName);
     if (!subscription) {
-      [subscription] = await topic.subscription(subscriptionName).get({ autoCreate: true });
-      this.subscriptionPool.set(subscriptionName, subscription);
+      try {
+        let initPromise = this.subscriptionInits.get(subscriptionName);
+        if (!initPromise) {
+          initPromise = topic.subscription(subscriptionName).get({ autoCreate: true });
+          this.subscriptionInits.set(subscriptionName, initPromise);
+        }
+
+        [subscription] = await initPromise;
+        this.subscriptionPool.set(subscriptionName, subscription);
+      } finally {
+        this.subscriptionInits.delete(subscriptionName);
+      }
     }
 
     subscription.on('message', async (message) => {
