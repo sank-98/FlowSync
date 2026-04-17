@@ -4,7 +4,7 @@
 // ================================================================
 
 const _API_BASE = window.location.origin;
-const IS_GITHUB_PAGES = window.location.hostname.includes('github.io');
+const _IS_GITHUB_PAGES = window.location.hostname.includes('github.io');
 
 // -------------------- STATE --------------------
 const state = {
@@ -26,6 +26,12 @@ const state = {
   isSimulationRunning: true,
   eventPulse: 0,
 };
+
+function announceForScreenReader(message) {
+  const announcer = document.getElementById('sr-announcer');
+  if (!announcer) return;
+  announcer.textContent = message;
+}
 
 // -------------------- COLORS --------------------
 function densityColor(density) {
@@ -655,6 +661,15 @@ function renderStadium() {
     group.appendChild(emojiText);
 
     group.addEventListener('click', () => selectZone(zone.id));
+    group.setAttribute('tabindex', '0');
+    group.setAttribute('role', 'button');
+    group.setAttribute('aria-label', `${zone.name}, ${Math.round(density * 100)} percent density`);
+    group.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        selectZone(zone.id);
+      }
+    });
     svg.appendChild(group);
   });
 }
@@ -664,11 +679,13 @@ async function selectZone(zoneId) {
   state.selectedZoneId = zoneId;
   const zoneSelect = document.getElementById('current-zone');
   if (zoneSelect) zoneSelect.value = zoneId;
+  const zone = state.zones.find((candidate) => candidate.id === zoneId);
+  if (zone) announceForScreenReader(`${zone.name} selected`);
   renderStadium();
 
   try {
-    const zone = await fetchZoneDetails(zoneId);
-    renderSpotlight(zone);
+    const selectedZone = await fetchZoneDetails(zoneId);
+    renderSpotlight(selectedZone);
   } catch (err) {
     console.error('Zone details fetch failed:', err);
   }
@@ -816,7 +833,9 @@ function setupMapToggles() {
     heatBtn.addEventListener('click', () => {
       state.showHeatmap = !state.showHeatmap;
       heatBtn.classList.toggle('active', state.showHeatmap);
+      heatBtn.setAttribute('aria-pressed', String(state.showHeatmap));
       heatBtn.textContent = state.showHeatmap ? '🌡️ Heatmap: ON' : '🌡️ Heatmap: OFF';
+      announceForScreenReader(`Heatmap ${state.showHeatmap ? 'enabled' : 'disabled'}`);
       renderStadium();
     });
   }
@@ -825,7 +844,9 @@ function setupMapToggles() {
     flowBtn.addEventListener('click', () => {
       state.showFlow = !state.showFlow;
       flowBtn.classList.toggle('active', state.showFlow);
+      flowBtn.setAttribute('aria-pressed', String(state.showFlow));
       flowBtn.textContent = state.showFlow ? '🌊 Flow: ON' : '🌊 Flow: OFF';
+      announceForScreenReader(`Flow overlay ${state.showFlow ? 'enabled' : 'disabled'}`);
       renderStadium();
     });
   }
@@ -834,10 +855,22 @@ function setupMapToggles() {
     predBtn.addEventListener('click', () => {
       state.showPredicted = !state.showPredicted;
       predBtn.classList.toggle('active', state.showPredicted);
+      predBtn.setAttribute('aria-pressed', String(state.showPredicted));
       predBtn.textContent = state.showPredicted ? '🔮 Predicted: ON' : '🔮 Predicted: OFF';
+      announceForScreenReader(`Predicted density overlay ${state.showPredicted ? 'enabled' : 'disabled'}`);
       renderStadium();
     });
   }
+
+  [heatBtn, flowBtn, predBtn].forEach((btn) => {
+    if (!btn) return;
+    btn.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        btn.click();
+      }
+    });
+  });
 }
 
 // -------------------- TIME SLIDER --------------------
@@ -889,7 +922,7 @@ async function refreshDashboard() {
       state.simulationTime += 1.5;
       
       // Simulate density changes
-      state.zones.forEach((zone, idx) => {
+      state.zones.forEach((zone, _idx) => {
         zone.prev_density = zone.density;
         const neighborAvg = zone.neighbors.length 
           ? zone.neighbors.reduce((s, nId) => {
@@ -910,7 +943,8 @@ async function refreshDashboard() {
       });
     }
 
-    await Promise.all([fetchDashboard(), fetchZones()]);
+    await fetchZones();
+    await fetchDashboard();
     populateZoneDropdown(state.zones);
     renderMetrics();
     renderAnomalies();
@@ -949,6 +983,14 @@ function setupEventListeners() {
       if (e.key === 'Enter') handleChatSubmit();
     });
   }
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      const focused = document.activeElement;
+      if (focused && focused !== document.body) focused.blur();
+      announceForScreenReader('Focus cleared');
+    }
+  });
 
   const triggerBtn = document.getElementById('trigger-event-btn');
   if (triggerBtn) {
@@ -994,6 +1036,7 @@ async function init() {
   setInterval(updateClock, 1000);
 
   await refreshDashboard();
+  announceForScreenReader('FlowSync dashboard loaded');
 
   addChatMessage('assistant',
     '🚀 <strong>FlowSync Command Center LIVE</strong><br>' +

@@ -12,6 +12,8 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <a class="skip-link" href="#dashboard-grid">Skip to main dashboard</a>
+  <div id="sr-announcer" class="sr-only" aria-live="polite" aria-atomic="true"></div>
   <div class="app-shell">
     <!-- Ambient background orbs -->
     <div class="ambient-orb orb-1"></div>
@@ -19,7 +21,7 @@
     <div class="ambient-orb orb-3"></div>
 
     <!-- ============ TOPBAR ============ -->
-    <header class="topbar" id="topbar">
+    <header class="topbar" id="topbar" role="banner">
       <div class="topbar-left">
         <div class="logo">
           <span class="logo-icon">◉</span>
@@ -78,7 +80,7 @@
     </section>
 
     <!-- ============ MAIN DASHBOARD GRID ============ -->
-    <main class="dashboard-grid" id="dashboard-grid">
+    <main class="dashboard-grid" id="dashboard-grid" tabindex="-1">
 
       <!-- ====== LEFT: Smart Routing Panel ====== -->
       <section class="panel panel-routing" id="panel-routing">
@@ -94,13 +96,13 @@
         <div class="section-card">
           <div class="control-group">
             <label for="current-zone">Your Zone</label>
-            <select id="current-zone">
+            <select id="current-zone" aria-label="Select your current zone">
               <option value="">Select live position</option>
             </select>
           </div>
           <div class="control-group" style="margin-top:8px;">
             <label for="destination">Destination</label>
-            <select id="destination">
+            <select id="destination" aria-label="Select destination type">
               <option value="">Choose destination</option>
               <option value="food">🍕 Food Court</option>
               <option value="restroom">🚻 Restroom</option>
@@ -111,14 +113,14 @@
           </div>
           <div class="control-group" style="margin-top:8px;">
             <label for="preference">Optimization</label>
-            <select id="preference">
+            <select id="preference" aria-label="Select route optimization preference">
               <option value="balanced">⚖️ Balanced</option>
               <option value="fastest">⚡ Fastest</option>
               <option value="least_crowded">🌊 Least Crowded</option>
               <option value="accessible">♿ Accessible</option>
             </select>
           </div>
-          <button id="get-route-btn" class="btn-primary" style="margin-top:10px;">Generate Best Path</button>
+          <button id="get-route-btn" class="btn-primary" style="margin-top:10px;" aria-label="Generate recommended route">Generate Best Path</button>
         </div>
 
         <!-- Route result -->
@@ -156,11 +158,11 @@
           </div>
           <div class="controls-row">
             <label class="toggle-label">
-              <input type="checkbox" id="sim-toggle" checked>
+              <input type="checkbox" id="sim-toggle" checked aria-label="Toggle live simulation updates">
               <span>Live updates</span>
             </label>
-            <button id="sim-reset-btn" class="btn-ghost">Reset</button>
-            <button id="trigger-event-btn" class="btn-ghost btn-warning">Surge</button>
+            <button id="sim-reset-btn" class="btn-ghost" aria-label="Reset simulation data">Reset</button>
+            <button id="trigger-event-btn" class="btn-ghost btn-warning" aria-label="Trigger event surge simulation">Surge</button>
           </div>
           <p class="muted text-xs mt-sm" id="exit-recommend">Exit guidance will appear here.</p>
         </div>
@@ -174,9 +176,9 @@
             <h2>Live Crowd Heatmap</h2>
           </div>
           <div class="map-toolbar">
-            <span class="map-badge active" id="toggle-heatmap">🌡️ Heatmap</span>
-            <span class="map-badge" id="toggle-flow">🔀 Flow</span>
-            <span class="map-badge" id="toggle-predicted">🔮 Predicted</span>
+             <span class="map-badge active" id="toggle-heatmap" role="button" tabindex="0" aria-pressed="true" aria-label="Toggle heatmap overlay">🌡️ Heatmap</span>
+             <span class="map-badge" id="toggle-flow" role="button" tabindex="0" aria-pressed="false" aria-label="Toggle flow overlay">🔀 Flow</span>
+             <span class="map-badge" id="toggle-predicted" role="button" tabindex="0" aria-pressed="false" aria-label="Toggle predicted density overlay">🔮 Predicted</span>
           </div>
         </div>
 
@@ -253,10 +255,10 @@
             <h3>FlowSync Copilot</h3>
             <span class="badge badge-purple">AI</span>
           </div>
-          <div id="chat-messages" class="chat-messages"></div>
+          <div id="chat-messages" class="chat-messages" role="log" aria-live="polite" aria-label="Copilot conversation"></div>
           <div class="chat-input-row">
-            <input type="text" id="chat-input" placeholder="Ask about congestion, exits, or routes...">
-            <button id="send-chat-btn" class="btn-send">Send</button>
+            <input type="text" id="chat-input" placeholder="Ask about congestion, exits, or routes..." aria-label="Ask FlowSync Copilot">
+            <button id="send-chat-btn" class="btn-send" aria-label="Send chat message">Send</button>
           </div>
         </div>
       </section>
@@ -272,14 +274,14 @@
       <div class="control-bar-center">
         <div class="time-slider-group">
           <span class="time-slider-label">Timeline</span>
-          <input type="range" class="time-slider" id="time-slider" min="-10" max="10" value="0" step="1">
+           <input type="range" class="time-slider" id="time-slider" min="-10" max="10" value="0" step="1" aria-label="Adjust timeline projection in minutes">
           <span class="time-slider-value" id="time-slider-value">Now</span>
         </div>
       </div>
       <div class="control-bar-right">
         <div class="whatif-toggle" id="whatif-toggle">
           <label class="toggle-label">
-            <input type="checkbox" id="whatif-checkbox">
+              <input type="checkbox" id="whatif-checkbox" aria-label="Toggle what-if prediction mode">
             <span class="whatif-label">What-If Mode</span>
           </label>
         </div>

@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
+const crypto = require('crypto');
 const admin = require('firebase-admin');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
@@ -9,9 +10,151 @@ dotenv.config();
 
 const app = express();
 const PORT = Number(process.env.PORT || 8080);
+const RATE_LIMIT_WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS || 60_000);
+const RATE_LIMIT_MAX_REQUESTS = Number(process.env.RATE_LIMIT_MAX_REQUESTS || 120);
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+const DESTINATION_TYPES = new Set(['food', 'restroom', 'exit', 'lounge', 'medical']);
+const PREFERENCE_TYPES = new Set(['balanced', 'fastest', 'least_crowded', 'accessible']);
+const requestBuckets = new Map();
 
 app.use(cors());
-app.use(express.json());
+app.set('trust proxy', 1);
+
+app.use((req, res, next) => {
+  const shouldForceHttps = process.env.ENABLE_HTTPS_REDIRECT === 'true';
+  const isLocal = req.hostname === 'localhost' || req.hostname === '127.0.0.1';
+  const forwardedProto = req.headers['x-forwarded-proto'];
+  const isSecure = req.secure || forwardedProto === 'https';
+
+  if (shouldForceHttps && !isLocal && !isSecure) {
+    return res.redirect(301, `https://${req.headers.host}${req.originalUrl}`);
+  }
+
+  return next();
+});
+
+app.use((req, res, next) => {
+  const csp = [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' data:",
+    "connect-src 'self'",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+  ].join('; ');
+
+  res.setHeader('Content-Security-Policy', csp);
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+
+  if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+
+  return next();
+});
+
+app.use((req, res, next) => {
+  const now = Date.now();
+  const key = req.ip || req.connection.remoteAddress || 'unknown';
+  const bucket = requestBuckets.get(key) || { count: 0, resetAt: now + RATE_LIMIT_WINDOW_MS };
+
+  if (bucket.resetAt <= now) {
+    bucket.count = 0;
+    bucket.resetAt = now + RATE_LIMIT_WINDOW_MS;
+  }
+
+  bucket.count += 1;
+  requestBuckets.set(key, bucket);
+
+  res.setHeader('X-RateLimit-Limit', RATE_LIMIT_MAX_REQUESTS);
+  res.setHeader('X-RateLimit-Remaining', Math.max(0, RATE_LIMIT_MAX_REQUESTS - bucket.count));
+  res.setHeader('X-RateLimit-Reset', Math.ceil(bucket.resetAt / 1000));
+
+  if (bucket.count > RATE_LIMIT_MAX_REQUESTS) {
+    return res.status(429).json({ error: 'Too many requests. Please retry shortly.' });
+  }
+
+  return next();
+});
+
+app.use(express.json({ limit: '100kb' }));
+
+function sanitizeValue(value) {
+  if (typeof value === 'string') {
+    return value
+      .replace(/<[^>]*>/g, '')
+      .replace(/[\u0000-\u001F\u007F]/g, '')
+      .trim();
+  }
+  if (Array.isArray(value)) return value.map(sanitizeValue);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, sanitizeValue(v)]));
+  }
+  return value;
+}
+
+function escapeForJson(value) {
+  if (typeof value === 'string') {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+  if (Array.isArray(value)) return value.map(escapeForJson);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, escapeForJson(v)]));
+  }
+  return value;
+}
+
+app.use((req, res, next) => {
+  req.query = sanitizeValue(req.query);
+  req.params = sanitizeValue(req.params);
+  req.body = sanitizeValue(req.body);
+
+  const baseJson = res.json.bind(res);
+  res.json = (payload) => baseJson(escapeForJson(payload));
+  next();
+});
+
+app.use((req, res, next) => {
+  if (SAFE_METHODS.has(req.method)) return next();
+  if (!req.path.startsWith('/api/')) return next();
+
+  const origin = req.headers.origin;
+  const referer = req.headers.referer;
+  const host = req.headers.host;
+
+  if (!origin && !referer) return next();
+
+  const source = origin || referer;
+  let sourceHost = '';
+  try {
+    sourceHost = new URL(source).host;
+  } catch (_err) {
+    return res.status(403).json({ error: 'Invalid request origin' });
+  }
+
+  if (sourceHost !== host) {
+    return res.status(403).json({ error: 'CSRF validation failed' });
+  }
+
+  return next();
+});
+
+app.use((req, res, next) => {
+  const csrfToken = crypto.randomBytes(16).toString('hex');
+  res.setHeader('X-CSRF-Token', csrfToken);
+  return next();
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use((req, res, next) => {
@@ -219,6 +362,18 @@ function classifyPressure(density) {
 
 function getZone(zoneId) {
   return zones.find((zone) => zone.id === zoneId);
+}
+
+function requireApiAuth(req, res, next) {
+  const configuredToken = process.env.API_AUTH_TOKEN;
+  if (!configuredToken) return next();
+
+  const providedToken = req.headers['x-api-token'];
+  if (!providedToken || providedToken !== configuredToken) {
+    return res.status(401).json({ error: 'Unauthorized API request' });
+  }
+
+  return next();
 }
 
 function getNeighbors(zone) {
@@ -807,6 +962,12 @@ app.post('/api/route', (req, res) => {
       error: 'Missing required fields: fromZoneId, destinationType',
     });
   }
+  if (!DESTINATION_TYPES.has(destinationType)) {
+    return res.status(400).json({ error: 'Invalid destinationType' });
+  }
+  if (preference && !PREFERENCE_TYPES.has(preference)) {
+    return res.status(400).json({ error: 'Invalid preference' });
+  }
 
   const routingResult = findOptimalRoute(fromZoneId, destinationType, preference || 'balanced');
 
@@ -836,6 +997,9 @@ app.post('/api/time-analysis', (req, res) => {
   if (!route || !Array.isArray(route)) {
     return res.status(400).json({ error: 'Invalid route format' });
   }
+  if (route.length < 2 || route.length > 25 || route.some((zoneId) => typeof zoneId !== 'string')) {
+    return res.status(400).json({ error: 'Route payload is out of bounds' });
+  }
 
   return res.json(analyzeTimeOptions(route));
 });
@@ -847,6 +1011,9 @@ app.get('/api/exit-strategy', (req, res) => {
 app.post('/api/ai-chat', async (req, res) => {
   if (!req.body.message) {
     return res.status(400).json({ error: 'Message is required' });
+  }
+  if (typeof req.body.message !== 'string' || req.body.message.length > 500) {
+    return res.status(400).json({ error: 'Message must be a string up to 500 chars' });
   }
 
   const response = await getAIResponse(req.body.message);
@@ -870,7 +1037,10 @@ app.get('/api/stats', (req, res) => {
   });
 });
 
-app.post('/api/simulation', (req, res) => {
+app.post('/api/simulation', requireApiAuth, (req, res) => {
+  if (!Object.prototype.hasOwnProperty.call(req.body, 'running')) {
+    return res.status(400).json({ error: 'running flag is required' });
+  }
   isSimulationRunning = Boolean(req.body.running);
   res.json({
     running: isSimulationRunning,
@@ -878,7 +1048,7 @@ app.post('/api/simulation', (req, res) => {
   });
 });
 
-app.post('/api/trigger-event-end', (req, res) => {
+app.post('/api/trigger-event-end', requireApiAuth, (req, res) => {
   eventPulse = clamp(eventPulse + 0.85, 0, 1.2);
 
   zones.forEach((zone) => {
@@ -895,7 +1065,7 @@ app.post('/api/trigger-event-end', (req, res) => {
   });
 });
 
-app.post('/api/reset', (req, res) => {
+app.post('/api/reset', requireApiAuth, (req, res) => {
   initializeStadium();
   res.json({
     message: 'Simulation reset successfully',
