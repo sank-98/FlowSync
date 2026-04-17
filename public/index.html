@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none';">
+  <meta name="csrf-token" content="test">
   <title>FlowSync | Real-Time Crowd Intelligence Command Center</title>
   <link rel="icon" href="FlowSyncIcon.png" type="image/x-icon">
   <meta name="description" content="FlowSync: Real-time crowd intelligence and routing platform for large venues. Live heatmaps, predictive routing, and operator intelligence.">
@@ -12,6 +14,8 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <a class="skip-link" href="#dashboard-grid">Skip to main dashboard</a>
+  <div id="a11y-live-region" class="sr-only" aria-live="polite" aria-atomic="true"></div>
   <div class="app-shell">
     <!-- Ambient background orbs -->
     <div class="ambient-orb orb-1"></div>
@@ -19,7 +23,7 @@
     <div class="ambient-orb orb-3"></div>
 
     <!-- ============ TOPBAR ============ -->
-    <header class="topbar" id="topbar">
+    <header class="topbar" id="topbar" role="banner">
       <div class="topbar-left">
         <div class="logo">
           <span class="logo-icon">◉</span>
@@ -42,7 +46,7 @@
     </header>
 
     <!-- ============ HERO METRICS ============ -->
-    <section class="hero-metrics" id="hero-metrics">
+    <section class="hero-metrics" id="hero-metrics" aria-label="Key metrics">
       <article class="metric-card metric-cyan">
         <div class="metric-icon">📊</div>
         <div class="metric-body">
@@ -78,7 +82,7 @@
     </section>
 
     <!-- ============ MAIN DASHBOARD GRID ============ -->
-    <main class="dashboard-grid" id="dashboard-grid">
+    <main class="dashboard-grid" id="dashboard-grid" tabindex="-1">
 
       <!-- ====== LEFT: Smart Routing Panel ====== -->
       <section class="panel panel-routing" id="panel-routing">
@@ -94,13 +98,13 @@
         <div class="section-card">
           <div class="control-group">
             <label for="current-zone">Your Zone</label>
-            <select id="current-zone">
+            <select id="current-zone" aria-label="Current zone">
               <option value="">Select live position</option>
             </select>
           </div>
           <div class="control-group" style="margin-top:8px;">
             <label for="destination">Destination</label>
-            <select id="destination">
+            <select id="destination" aria-label="Destination type">
               <option value="">Choose destination</option>
               <option value="food">🍕 Food Court</option>
               <option value="restroom">🚻 Restroom</option>
@@ -111,14 +115,14 @@
           </div>
           <div class="control-group" style="margin-top:8px;">
             <label for="preference">Optimization</label>
-            <select id="preference">
+            <select id="preference" aria-label="Route optimization preference">
               <option value="balanced">⚖️ Balanced</option>
               <option value="fastest">⚡ Fastest</option>
               <option value="least_crowded">🌊 Least Crowded</option>
               <option value="accessible">♿ Accessible</option>
             </select>
           </div>
-          <button id="get-route-btn" class="btn-primary" style="margin-top:10px;">Generate Best Path</button>
+          <button id="get-route-btn" class="btn-primary" style="margin-top:10px;" aria-label="Generate route">Generate Best Path</button>
         </div>
 
         <!-- Route result -->
@@ -181,9 +185,9 @@
         </div>
 
         <!-- Stadium SVG -->
-        <div class="stadium-container" id="stadium-container">
-          <svg id="stadium-svg" viewBox="0 0 1000 760" aria-label="Interactive stadium heatmap"></svg>
-        </div>
+          <div class="stadium-container" id="stadium-container">
+            <svg id="stadium-svg" viewBox="0 0 1000 760" role="img" aria-label="Interactive stadium heatmap"></svg>
+          </div>
 
         <!-- Legend -->
         <div class="legend-bar">
@@ -255,8 +259,8 @@
           </div>
           <div id="chat-messages" class="chat-messages"></div>
           <div class="chat-input-row">
-            <input type="text" id="chat-input" placeholder="Ask about congestion, exits, or routes...">
-            <button id="send-chat-btn" class="btn-send">Send</button>
+            <input type="text" id="chat-input" placeholder="Ask about congestion, exits, or routes..." aria-label="Chat input">
+            <button id="send-chat-btn" class="btn-send" aria-label="Send chat message">Send</button>
           </div>
         </div>
       </section>
@@ -288,6 +292,8 @@
     </footer>
   </div>
 
+  <script src="security.js"></script>
+  <script src="accessibility.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

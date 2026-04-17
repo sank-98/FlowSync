@@ -1,0 +1,3 @@
+{
+  "kpis": ["availability", "latency", "error_rate", "security_events"]
+}

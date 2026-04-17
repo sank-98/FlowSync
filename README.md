@@ -160,6 +160,17 @@ $$MovementCost = BaseRingCost + (CurrentDensity \times Dw) + (PredictedDensity \
 
 ---
 
+## 🔐 Security, Accessibility, and Automation Additions
+
+- Security middleware stack: `middleware/security.js`, `middleware/csrf.js`, `middleware/rate-limiter.js`, `middleware/request-validator.js`
+- Central config: `config/security-config.js`, `config/logging-config.js`, `config/performance-config.js`
+- Accessibility support: `public/accessibility.js`, skip link/live region in `public/index.html`
+- Expanded testing: `tests/*.test.js`, `jest.config.js`, `.nycrc.json`
+- Deployment and monitoring scripts: `scripts/deploy-*.sh`, `monitoring/setup-monitoring.js`, `routes/health-check.js`
+- Security tooling/workflows: `.github/workflows/*.yml`, `.sonarcloud.properties`, `snyk-config.json`, `.snyk`
+
+---
+
 ## 🤝 Contributing & License
 Contributions are welcome! Please fork the repo and open a Pull Request.
 This project is licensed under the **MIT License**.
