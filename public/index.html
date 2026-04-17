@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FlowSync | Real-Time Crowd Intelligence Command Center</title>
+  <meta name="description" content="FlowSync: Real-time crowd intelligence and routing platform for large venues. Live heatmaps, predictive routing, and operator intelligence.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Ambient background orbs -->
+    <div class="ambient-orb orb-1"></div>
+    <div class="ambient-orb orb-2"></div>
+    <div class="ambient-orb orb-3"></div>
+
+    <!-- ============ TOPBAR ============ -->
+    <header class="topbar" id="topbar">
+      <div class="topbar-left">
+        <div class="logo">
+          <span class="logo-icon">◉</span>
+          <span class="logo-text">FlowSync</span>
+          <span class="logo-badge">LIVE</span>
+        </div>
+        <p class="topbar-tagline">Real-Time Crowd Intelligence & Routing Platform</p>
+      </div>
+      <div class="topbar-right">
+        <div class="status-indicator">
+          <span class="pulse-dot"></span>
+          <span id="system-status">Live Simulation</span>
+        </div>
+        <div class="topbar-clock" id="system-clock">--:--:--</div>
+        <div class="topbar-sync">
+          <span>Last sync</span>
+          <strong id="last-sync">--</strong>
+        </div>
+      </div>
+    </header>
+
+    <!-- ============ HERO METRICS ============ -->
+    <section class="hero-metrics" id="hero-metrics">
+      <article class="metric-card metric-cyan">
+        <div class="metric-icon">📊</div>
+        <div class="metric-body">
+          <span class="metric-label">Live Density</span>
+          <strong class="metric-value" id="overall-density">0%</strong>
+          <span class="metric-sub">Current venue load</span>
+        </div>
+      </article>
+      <article class="metric-card metric-purple">
+        <div class="metric-icon">🔮</div>
+        <div class="metric-body">
+          <span class="metric-label">Predicted Load</span>
+          <strong class="metric-value" id="predicted-density">0%</strong>
+          <span class="metric-sub">Next 15 minutes</span>
+        </div>
+      </article>
+      <article class="metric-card metric-amber">
+        <div class="metric-icon">⚠️</div>
+        <div class="metric-body">
+          <span class="metric-label">Active Anomalies</span>
+          <strong class="metric-value" id="active-anomalies">0</strong>
+          <span class="metric-sub">Priority alerts</span>
+        </div>
+      </article>
+      <article class="metric-card metric-emerald">
+        <div class="metric-icon">⚡</div>
+        <div class="metric-body">
+          <span class="metric-label">Routing Latency</span>
+          <strong class="metric-value" id="routing-latency">0ms</strong>
+          <span class="metric-sub">Decision engine</span>
+        </div>
+      </article>
+    </section>
+
+    <!-- ============ MAIN DASHBOARD GRID ============ -->
+    <main class="dashboard-grid" id="dashboard-grid">
+
+      <!-- ====== LEFT: Smart Routing Panel ====== -->
+      <section class="panel panel-routing" id="panel-routing">
+        <div class="panel-header">
+          <div class="panel-header-left">
+            <span class="panel-kicker">Navigation Control</span>
+            <h2>Smart Routing</h2>
+          </div>
+          <span class="badge badge-cyan">Predictive</span>
+        </div>
+
+        <!-- Route controls -->
+        <div class="section-card">
+          <div class="control-group">
+            <label for="current-zone">Your Zone</label>
+            <select id="current-zone">
+              <option value="">Select live position</option>
+            </select>
+          </div>
+          <div class="control-group" style="margin-top:8px;">
+            <label for="destination">Destination</label>
+            <select id="destination">
+              <option value="">Choose destination</option>
+              <option value="food">🍕 Food Court</option>
+              <option value="restroom">🚻 Restroom</option>
+              <option value="exit">🚪 Exit</option>
+              <option value="lounge">🛋️ Lounge</option>
+              <option value="medical">🏥 Medical</option>
+            </select>
+          </div>
+          <div class="control-group" style="margin-top:8px;">
+            <label for="preference">Optimization</label>
+            <select id="preference">
+              <option value="balanced">⚖️ Balanced</option>
+              <option value="fastest">⚡ Fastest</option>
+              <option value="least_crowded">🌊 Least Crowded</option>
+              <option value="accessible">♿ Accessible</option>
+            </select>
+          </div>
+          <button id="get-route-btn" class="btn-primary" style="margin-top:10px;">Generate Best Path</button>
+        </div>
+
+        <!-- Route result -->
+        <div class="section-card" id="route-result">
+          <div class="section-card-header">
+            <h3>Recommended Route</h3>
+            <span id="route-confidence" class="badge badge-ghost">--</span>
+          </div>
+          <div id="route-content" class="muted text-sm">Select a zone and destination to compute a predictive path.</div>
+        </div>
+
+        <!-- Time arbitrage -->
+        <div class="section-card" id="time-comparison">
+          <div class="section-card-header">
+            <h3>Time Arbitrage</h3>
+            <span id="time-recommendation" class="badge badge-emerald">--</span>
+          </div>
+          <div id="time-content" class="muted text-sm">Route timing analysis will appear here.</div>
+        </div>
+
+        <!-- Facility Insights -->
+        <div class="section-card" id="facility-section">
+          <div class="section-card-header">
+            <h3>Facility Insights</h3>
+            <span class="badge badge-ghost">Live</span>
+          </div>
+          <div id="facility-list" class="muted text-sm">Facility data loading...</div>
+        </div>
+
+        <!-- Simulation controls -->
+        <div class="section-card">
+          <div class="section-card-header">
+            <h3>Simulation</h3>
+            <span class="sim-badge" id="sim-time">0s</span>
+          </div>
+          <div class="controls-row">
+            <label class="toggle-label">
+              <input type="checkbox" id="sim-toggle" checked>
+              <span>Live updates</span>
+            </label>
+            <button id="sim-reset-btn" class="btn-ghost">Reset</button>
+            <button id="trigger-event-btn" class="btn-ghost btn-warning">Surge</button>
+          </div>
+          <p class="muted text-xs mt-sm" id="exit-recommend">Exit guidance will appear here.</p>
+        </div>
+      </section>
+
+      <!-- ====== CENTER: Live Crowd Map ====== -->
+      <section class="panel panel-map" id="panel-map">
+        <div class="panel-header">
+          <div class="panel-header-left">
+            <span class="panel-kicker">Venue Digital Twin</span>
+            <h2>Live Crowd Heatmap</h2>
+          </div>
+          <div class="map-toolbar">
+            <span class="map-badge active" id="toggle-heatmap">🌡️ Heatmap</span>
+            <span class="map-badge" id="toggle-flow">🔀 Flow</span>
+            <span class="map-badge" id="toggle-predicted">🔮 Predicted</span>
+          </div>
+        </div>
+
+        <!-- Stadium SVG -->
+        <div class="stadium-container" id="stadium-container">
+          <svg id="stadium-svg" viewBox="0 0 1000 760" aria-label="Interactive stadium heatmap"></svg>
+        </div>
+
+        <!-- Legend -->
+        <div class="legend-bar">
+          <span><i class="legend-swatch swatch-low"></i> Low</span>
+          <span><i class="legend-swatch swatch-medium"></i> Medium</span>
+          <span><i class="legend-swatch swatch-high"></i> High</span>
+          <span><i class="legend-swatch swatch-critical"></i> Critical</span>
+          <span><i class="legend-swatch swatch-route"></i> Route</span>
+        </div>
+
+        <!-- Zone Spotlight -->
+        <div class="zone-spotlight" id="zone-spotlight">
+          <div>
+            <span class="panel-kicker">Zone Spotlight</span>
+            <h3 class="spotlight-title" id="spotlight-title">Select a zone</h3>
+          </div>
+          <div class="spotlight-grid" id="spotlight-grid">
+            <div class="spotlight-stat"><span>Density</span><strong>--</strong></div>
+            <div class="spotlight-stat"><span>Predicted</span><strong>--</strong></div>
+            <div class="spotlight-stat"><span>Queue</span><strong>--</strong></div>
+            <div class="spotlight-stat"><span>Velocity</span><strong>--</strong></div>
+          </div>
+          <div class="sparkline-container" id="sparkline-container"></div>
+          <p class="spotlight-summary" id="spotlight-summary">Click any zone on the stadium map to inspect live movement conditions.</p>
+        </div>
+      </section>
+
+      <!-- ====== RIGHT: Operator Dashboard ====== -->
+      <section class="panel panel-operator" id="panel-operator">
+        <div class="panel-header">
+          <div class="panel-header-left">
+            <span class="panel-kicker">Operator Intelligence</span>
+            <h2>Command & Control</h2>
+          </div>
+          <span class="badge badge-amber" id="anomaly-count">0 alerts</span>
+        </div>
+
+        <!-- Priority Anomalies -->
+        <div class="section-card">
+          <div class="section-card-header">
+            <h3>Priority Anomalies</h3>
+          </div>
+          <div id="anomaly-list" class="empty-state">No active anomalies. Venue is stable.</div>
+        </div>
+
+        <!-- Cluster Trends -->
+        <div class="section-card">
+          <div class="section-card-header">
+            <h3>Cluster Trends</h3>
+            <span class="badge badge-ghost">Adaptive</span>
+          </div>
+          <div id="cluster-list" class="empty-state">Cluster data loading...</div>
+        </div>
+
+        <!-- System Recommendations -->
+        <div class="section-card">
+          <div class="section-card-header">
+            <h3>AI Recommendations</h3>
+            <span class="badge badge-emerald">Live</span>
+          </div>
+          <div id="recommendation-list" class="empty-state">Recommendations loading...</div>
+        </div>
+
+        <!-- AI Chat -->
+        <div class="section-card chat-section">
+          <div class="section-card-header">
+            <h3>FlowSync Copilot</h3>
+            <span class="badge badge-purple">AI</span>
+          </div>
+          <div id="chat-messages" class="chat-messages"></div>
+          <div class="chat-input-row">
+            <input type="text" id="chat-input" placeholder="Ask about congestion, exits, or routes...">
+            <button id="send-chat-btn" class="btn-send">Send</button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ============ BOTTOM CONTROL BAR ============ -->
+    <footer class="control-bar" id="control-bar">
+      <div class="control-bar-left">
+        <span class="badge badge-ghost">🏟️ VENUE OPS</span>
+        <span class="sim-badge" id="total-zones">-- zones</span>
+      </div>
+      <div class="control-bar-center">
+        <div class="time-slider-group">
+          <span class="time-slider-label">Timeline</span>
+          <input type="range" class="time-slider" id="time-slider" min="-10" max="10" value="0" step="1">
+          <span class="time-slider-value" id="time-slider-value">Now</span>
+        </div>
+      </div>
+      <div class="control-bar-right">
+        <div class="whatif-toggle" id="whatif-toggle">
+          <label class="toggle-label">
+            <input type="checkbox" id="whatif-checkbox">
+            <span class="whatif-label">What-If Mode</span>
+          </label>
+        </div>
+        <span class="sim-badge" id="density-mode">Standard</span>
+      </div>
+    </footer>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

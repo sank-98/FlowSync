@@ -1,0 +1,54 @@
+{
+  "ingress": "INGRESS_TRAFFIC_ALL",
+  "template": {
+    "timeout": "300s",
+    "maxInstanceRequestConcurrency": 80,
+    "scaling": {
+      "maxInstanceCount": 100
+    },
+    "containers": [
+      {
+        "image": "us-central1-docker.pkg.dev/REPLACE_WITH_PROJECT_ID/flowsync/flowsync:latest",
+        "ports": [
+          {
+            "containerPort": 8080
+          }
+        ],
+        "resources": {
+          "limits": {
+            "cpu": "1",
+            "memory": "512Mi"
+          }
+        },
+        "env": [
+          {
+            "name": "NODE_ENV",
+            "value": "production"
+          },
+          {
+            "name": "FIREBASE_PROJECT_ID",
+            "value": "REPLACE_WITH_FIREBASE_PROJECT_ID"
+          },
+          {
+            "name": "FIREBASE_DATABASE_URL",
+            "value": "REPLACE_WITH_FIREBASE_DATABASE_URL"
+          },
+          {
+            "name": "FIREBASE_SERVICE_ACCOUNT",
+            "value": "REPLACE_WITH_SINGLE_LINE_JSON"
+          },
+          {
+            "name": "GOOGLE_GEMINI_API_KEY",
+            "value": "REPLACE_WITH_GEMINI_KEY"
+          }
+        ]
+      }
+    ]
+  },
+  "traffic": [
+    {
+      "type": "TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST",
+      "percent": 100
+    }
+  ]
+}
