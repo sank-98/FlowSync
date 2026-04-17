@@ -11,7 +11,6 @@
 - [x] HACKATHON_SUBMISSION.md - Submission details
 - [x] API_DOCUMENTATION.md - Complete API reference
 - [x] TROUBLESHOOTING.md - Common issues
-- [x] CONTRIBUTING.md - Contributing guide
 - [x] REPOSITORY_STRUCTURE.md - File listing
 - [x] FILE_INDEX.md - File index
 - [x] HACKATHON_README.md - Hackathon overview
