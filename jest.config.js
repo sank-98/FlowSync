@@ -4,4 +4,14 @@ module.exports = {
   testMatch: ['**/tests/**/*.test.js'],
   testPathIgnorePatterns: ['/node_modules/', '<rootDir>/tests/load.test.js'],
   collectCoverageFrom: ['server.js', 'middleware/**/*.js', 'services/**/*.js', 'public/*.js'],
+  coverageReporters: ['text', 'lcov', 'json-summary'],
+  coverageThreshold: {
+    global: {
+      branches: 20,
+      functions: 30,
+      lines: 30,
+      statements: 30,
+    },
+  },
+  reporters: ['default'],
 };

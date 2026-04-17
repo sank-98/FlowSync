@@ -7,6 +7,11 @@
 ## 📋 Overview
 **FlowSync** is a comprehensive real-time crowd intelligence and dynamic routing optimization platform engineered for large-scale venues including stadiums, airports, shopping malls, and convention centers.
 
+## 📚 Core Documentation
+- [QUICK_START.md](./QUICK_START.md) — 5-minute local setup and smoke-test guide
+- [API.md](./API.md) — endpoint catalog with request/response examples
+- [DEPLOYMENT.md](./DEPLOYMENT.md) — deployment and troubleshooting guide
+
 ### Key Capabilities
 * **Live Crowd Visualization:** Interactive SVG-based heatmap with 28 zones.
 * **Intelligent Routing:** A* pathfinding with 5-factor weighted optimization.
@@ -172,7 +177,7 @@ $$MovementCost = BaseRingCost + (CurrentDensity \times Dw) + (PredictedDensity \
 ---
 
 ## 🤝 Contributing & License
-Contributions are welcome! Please fork the repo and open a Pull Request.
+Contributions are welcome! Please fork the repo, create a feature branch, and open a Pull Request with clear test evidence.
 This project is licensed under the **MIT License**.
 
 ---

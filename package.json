@@ -27,7 +27,8 @@
     "deploy:rollback": "bash scripts/rollback.sh",
     "health-check": "curl http://localhost:8080/health",
     "benchmark": "jest tests/performance.test.js",
-    "setup": "bash dev-tools-setup.sh",
+    "setup": "npm ci",
+    "test:coverage": "jest --runInBand --coverage",
     "test:deployment": "bash test-deployment.sh",
     "demo": "bash demo/demo-script.sh"
   },

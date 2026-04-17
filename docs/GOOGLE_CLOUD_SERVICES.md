@@ -36,7 +36,7 @@ FlowSync integrates the following Google Cloud services in the main server runti
 - `GET /health-check/services`
 
 ## Setup
-1. Copy `.env.google-cloud.example` to `.env` and fill values.
+1. Copy `.env.example` to `.env` and fill the Google Cloud values.
 2. Ensure a service account with access to Storage, Tasks, Monitoring, Logging, and Pub/Sub is available.
 3. Start service: `npm start`.
 

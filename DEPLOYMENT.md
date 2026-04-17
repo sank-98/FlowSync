@@ -11,6 +11,8 @@ This deployment utilizes the following GCP ecosystem:
 * **Database:** Firestore (NoSQL)
 * **AI:** Gemini API (Integrated via Environment Variables)
 
+Before deployment, copy `.env.example` to `.env` for local verification and fill in the required values for your environment.
+
 > **Note:** This guide is designed to work via REST APIs and GitHub Actions, minimizing the need for local `gcloud` CLI configuration.
 
 ---
@@ -147,6 +149,8 @@ jobs:
 ### 4.1 Deployment Methods
 * **Automatic:** `git push origin main` triggers the workflow.
 * **Manual:** Go to GitHub **Actions**, select **Deploy to Google Cloud**, and click **Run workflow**.
+
+For local setup and endpoint checks, see [QUICK_START.md](./QUICK_START.md) and [API.md](./API.md).
 
 ### 4.2 Rollback Procedures
 * **Backend:** `gcloud run services update-traffic flowsync --to-revisions REVISION_NAME=100 --region us-central1`

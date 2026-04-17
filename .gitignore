@@ -25,3 +25,8 @@ tmp/
 temp/
 cypress/videos/
 cypress/screenshots/
+.eslintcache
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+junit.xml
