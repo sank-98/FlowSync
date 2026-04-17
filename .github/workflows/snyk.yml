@@ -7,6 +7,9 @@ on:
   schedule:
     - cron: '0 4 * * 1'
 
+permissions:
+  contents: read
+
 jobs:
   dependency-and-code-scan:
     runs-on: ubuntu-latest
