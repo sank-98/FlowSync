@@ -40,10 +40,30 @@ if (securityConfig.trustProxy) {
 }
 app.use(express.json({ limit: securityConfig.request.maxJsonSize }));
 app.use(express.urlencoded({ extended: true, limit: securityConfig.request.maxUrlEncodedSize }));
+app.use((err, _req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && Object.prototype.hasOwnProperty.call(err, 'body')) {
+    return res.status(400).json({ error: 'Invalid JSON payload' });
+  }
+  return next(err);
+});
 applySecurity(app);
+app.use((req, res, next) => {
+  res.set('X-XSS-Protection', '1; mode=block');
+  res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  next();
+});
 app.use(trackPerformance);
 app.use(inputSanitizer);
 app.use(express.static(path.join(__dirname, 'public')));
+app.use((req, res, next) => {
+  if (['POST', 'PUT', 'PATCH'].includes(req.method) && req.path.startsWith('/api/')) {
+    if (!req.is('application/json')) {
+      return res.status(415).json({ error: 'Unsupported Media Type. Use application/json' });
+    }
+  }
+  return next();
+});
 app.use(googleServices.cloudLogger.requestLoggingMiddleware);
 app.use((req, res, next) => {
   res.on('finish', () => {
@@ -1259,8 +1279,11 @@ app.get('/api/stats', (req, res) => {
  * Body: { running: boolean }
  */
 app.post('/api/simulation', adminRouteAuth, (req, res) => {
+  if (typeof req.body.running !== 'boolean') {
+    return res.status(400).json({ error: 'running must be a boolean field' });
+  }
   isSimulationRunning = Boolean(req.body.running);
-  res.json({
+  return res.json({
     running: isSimulationRunning,
     simulationTime,
   });

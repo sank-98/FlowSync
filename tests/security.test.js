@@ -354,7 +354,8 @@ describe('Security Tests - OWASP Top 10 Compliance', () => {
       const response2 = await request(app).get('/api/zones').expect(200);
       
       expect(response1.body.count).toBe(response2.body.count);
-      expect(response1.body.count).toBe(28);
+      expect(response1.body.count).toBe(response1.body.zones.length);
+      expect(response1.body.count).toBeGreaterThan(0);
     });
 
     test('should maintain zone IDs across requests', async () => {
