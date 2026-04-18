@@ -33,7 +33,7 @@ steps:
       - 'managed'
       - '--allow-unauthenticated'
       - '--set-env-vars'
-      - 'FIREBASE_PROJECT_ID=${_FIREBASE_PROJECT_ID},GOOGLE_GEMINI_API_KEY=${_GOOGLE_GEMINI_API_KEY}'
+      - 'FIREBASE_PROJECT_ID=${_FIREBASE_PROJECT_ID},GOOGLE_GEMINI_API_KEY=${_GOOGLE_GEMINI_API_KEY},JWT_SECRET=${_JWT_SECRET},CSRF_SECRET=${_CSRF_SECRET}'
       - '--max-instances=100'
       - '--memory=512Mi'
       - '--cpu=1'
@@ -45,6 +45,8 @@ images:
 substitutions:
   _FIREBASE_PROJECT_ID: 'your-firebase-project'
   _GOOGLE_GEMINI_API_KEY: 'your-gemini-key'
+  _JWT_SECRET: 'change-me-jwt-secret'
+  _CSRF_SECRET: 'change-me-csrf-secret'
 
 options:
   machineType: 'N1_HIGHCPU_8'
