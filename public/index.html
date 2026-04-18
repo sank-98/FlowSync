@@ -1,43 +1,63 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none';">
-  <meta name="csrf-token" content="test">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Security -->
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';"
+  />
+  <meta http-equiv="Referrer-Policy" content="no-referrer" />
+  <meta name="csrf-token" content="test" />
+
+  <!-- SEO -->
   <title>FlowSync | Real-Time Crowd Intelligence Command Center</title>
-  <link rel="icon" href="FlowSyncIcon.png" type="image/x-icon">
-  <meta name="description" content="FlowSync: Real-time crowd intelligence and routing platform for large venues. Live heatmaps, predictive routing, and operator intelligence.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <meta
+    name="description"
+    content="FlowSync: real-time crowd intelligence and routing platform for large venues. Live heatmaps, predictive routing, and operator intelligence."
+  />
+
+  <!-- Performance -->
+  <link rel="icon" href="FlowSyncIcon.png" type="image/x-icon" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <a class="skip-link" href="#dashboard-grid">Skip to main dashboard</a>
+  <a class="skip-link" href="#chat-input">Skip to chat</a>
+
   <div id="a11y-live-region" class="sr-only" aria-live="polite" aria-atomic="true"></div>
-  <div class="app-shell">
-    <!-- Ambient background orbs -->
-    <div class="ambient-orb orb-1"></div>
-    <div class="ambient-orb orb-2"></div>
-    <div class="ambient-orb orb-3"></div>
+
+  <div class="app-shell" data-testid="app-shell">
+    <!-- Ambient background -->
+    <div class="ambient-orb orb-1" aria-hidden="true"></div>
+    <div class="ambient-orb orb-2" aria-hidden="true"></div>
+    <div class="ambient-orb orb-3" aria-hidden="true"></div>
 
     <!-- ============ TOPBAR ============ -->
     <header class="topbar" id="topbar" role="banner">
       <div class="topbar-left">
-        <div class="logo">
-          <span class="logo-icon">◉</span>
+        <div class="logo" aria-label="FlowSync live system">
+          <span class="logo-icon" aria-hidden="true">◉</span>
           <span class="logo-text">FlowSync</span>
-          <span class="logo-badge">LIVE</span>
+          <span class="logo-badge" aria-label="Live mode">LIVE</span>
         </div>
-        <p class="topbar-tagline">Real-Time Crowd Intelligence & Routing Platform</p>
+        <p class="topbar-tagline">Real-Time Crowd Intelligence &amp; Routing Platform</p>
       </div>
+
       <div class="topbar-right">
-        <div class="status-indicator">
-          <span class="pulse-dot"></span>
+        <div class="status-indicator" aria-live="polite">
+          <span class="pulse-dot" aria-hidden="true"></span>
           <span id="system-status">Live Simulation</span>
         </div>
-        <div class="topbar-clock" id="system-clock">--:--:--</div>
+        <div class="topbar-clock" id="system-clock" aria-label="System clock">--:--:--</div>
         <div class="topbar-sync">
           <span>Last sync</span>
           <strong id="last-sync">--</strong>
@@ -47,34 +67,37 @@
 
     <!-- ============ HERO METRICS ============ -->
     <section class="hero-metrics" id="hero-metrics" aria-label="Key metrics">
-      <article class="metric-card metric-cyan">
-        <div class="metric-icon">📊</div>
+      <article class="metric-card metric-cyan" aria-labelledby="metric-live-density-label">
+        <div class="metric-icon" aria-hidden="true">📊</div>
         <div class="metric-body">
-          <span class="metric-label">Live Density</span>
+          <span class="metric-label" id="metric-live-density-label">Live Density</span>
           <strong class="metric-value" id="overall-density">0%</strong>
           <span class="metric-sub">Current venue load</span>
         </div>
       </article>
-      <article class="metric-card metric-purple">
-        <div class="metric-icon">🔮</div>
+
+      <article class="metric-card metric-purple" aria-labelledby="metric-predicted-load-label">
+        <div class="metric-icon" aria-hidden="true">🔮</div>
         <div class="metric-body">
-          <span class="metric-label">Predicted Load</span>
+          <span class="metric-label" id="metric-predicted-load-label">Predicted Load</span>
           <strong class="metric-value" id="predicted-density">0%</strong>
           <span class="metric-sub">Next 15 minutes</span>
         </div>
       </article>
-      <article class="metric-card metric-amber">
-        <div class="metric-icon">⚠️</div>
+
+      <article class="metric-card metric-amber" aria-labelledby="metric-anomalies-label">
+        <div class="metric-icon" aria-hidden="true">⚠️</div>
         <div class="metric-body">
-          <span class="metric-label">Active Anomalies</span>
+          <span class="metric-label" id="metric-anomalies-label">Active Anomalies</span>
           <strong class="metric-value" id="active-anomalies">0</strong>
           <span class="metric-sub">Priority alerts</span>
         </div>
       </article>
-      <article class="metric-card metric-emerald">
-        <div class="metric-icon">⚡</div>
+
+      <article class="metric-card metric-emerald" aria-labelledby="metric-latency-label">
+        <div class="metric-icon" aria-hidden="true">⚡</div>
         <div class="metric-body">
-          <span class="metric-label">Routing Latency</span>
+          <span class="metric-label" id="metric-latency-label">Routing Latency</span>
           <strong class="metric-value" id="routing-latency">0ms</strong>
           <span class="metric-sub">Decision engine</span>
         </div>
@@ -83,25 +106,24 @@
 
     <!-- ============ MAIN DASHBOARD GRID ============ -->
     <main class="dashboard-grid" id="dashboard-grid" tabindex="-1">
-
       <!-- ====== LEFT: Smart Routing Panel ====== -->
-      <section class="panel panel-routing" id="panel-routing">
+      <section class="panel panel-routing" id="panel-routing" aria-labelledby="smart-routing-title">
         <div class="panel-header">
           <div class="panel-header-left">
             <span class="panel-kicker">Navigation Control</span>
-            <h2>Smart Routing</h2>
+            <h2 id="smart-routing-title">Smart Routing</h2>
           </div>
           <span class="badge badge-cyan">Predictive</span>
         </div>
 
-        <!-- Route controls -->
-        <div class="section-card">
+        <div class="section-card" data-testid="routing-controls">
           <div class="control-group">
             <label for="current-zone">Your Zone</label>
             <select id="current-zone" aria-label="Current zone">
               <option value="">Select live position</option>
             </select>
           </div>
+
           <div class="control-group" style="margin-top:8px;">
             <label for="destination">Destination</label>
             <select id="destination" aria-label="Destination type">
@@ -113,6 +135,7 @@
               <option value="medical">🏥 Medical</option>
             </select>
           </div>
+
           <div class="control-group" style="margin-top:8px;">
             <label for="preference">Optimization</label>
             <select id="preference" aria-label="Route optimization preference">
@@ -122,20 +145,23 @@
               <option value="accessible">♿ Accessible</option>
             </select>
           </div>
-          <button id="get-route-btn" class="btn-primary" style="margin-top:10px;" aria-label="Generate route">Generate Best Path</button>
+
+          <button id="get-route-btn" class="btn-primary" style="margin-top:10px;" type="button" aria-label="Generate route">
+            Generate Best Path
+          </button>
         </div>
 
-        <!-- Route result -->
-        <div class="section-card" id="route-result">
+        <div class="section-card" id="route-result" aria-live="polite">
           <div class="section-card-header">
             <h3>Recommended Route</h3>
             <span id="route-confidence" class="badge badge-ghost">--</span>
           </div>
-          <div id="route-content" class="muted text-sm">Select a zone and destination to compute a predictive path.</div>
+          <div id="route-content" class="muted text-sm">
+            Select a zone and destination to compute a predictive path.
+          </div>
         </div>
 
-        <!-- Time arbitrage -->
-        <div class="section-card" id="time-comparison">
+        <div class="section-card" id="time-comparison" aria-live="polite">
           <div class="section-card-header">
             <h3>Time Arbitrage</h3>
             <span id="time-recommendation" class="badge badge-emerald">--</span>
@@ -143,7 +169,6 @@
           <div id="time-content" class="muted text-sm">Route timing analysis will appear here.</div>
         </div>
 
-        <!-- Facility Insights -->
         <div class="section-card" id="facility-section">
           <div class="section-card-header">
             <h3>Facility Insights</h3>
@@ -152,7 +177,6 @@
           <div id="facility-list" class="muted text-sm">Facility data loading...</div>
         </div>
 
-        <!-- Simulation controls -->
         <div class="section-card">
           <div class="section-card-header">
             <h3>Simulation</h3>
@@ -160,37 +184,36 @@
           </div>
           <div class="controls-row">
             <label class="toggle-label">
-              <input type="checkbox" id="sim-toggle" checked>
+              <input type="checkbox" id="sim-toggle" checked />
               <span>Live updates</span>
             </label>
-            <button id="sim-reset-btn" class="btn-ghost">Reset</button>
-            <button id="trigger-event-btn" class="btn-ghost btn-warning">Surge</button>
+            <button id="sim-reset-btn" class="btn-ghost" type="button">Reset</button>
+            <button id="trigger-event-btn" class="btn-ghost btn-warning" type="button">Surge</button>
           </div>
           <p class="muted text-xs mt-sm" id="exit-recommend">Exit guidance will appear here.</p>
         </div>
       </section>
 
       <!-- ====== CENTER: Live Crowd Map ====== -->
-      <section class="panel panel-map" id="panel-map">
+      <section class="panel panel-map" id="panel-map" aria-labelledby="live-crowd-map-title">
         <div class="panel-header">
           <div class="panel-header-left">
             <span class="panel-kicker">Venue Digital Twin</span>
-            <h2>Live Crowd Heatmap</h2>
+            <h2 id="live-crowd-map-title">Live Crowd Heatmap</h2>
           </div>
-          <div class="map-toolbar">
-            <span class="map-badge active" id="toggle-heatmap">🌡️ Heatmap</span>
-            <span class="map-badge" id="toggle-flow">🔀 Flow</span>
-            <span class="map-badge" id="toggle-predicted">🔮 Predicted</span>
+
+          <div class="map-toolbar" role="toolbar" aria-label="Map display modes">
+            <button class="map-badge active" id="toggle-heatmap" type="button" aria-pressed="true">🌡️ Heatmap</button>
+            <button class="map-badge" id="toggle-flow" type="button" aria-pressed="false">🔀 Flow</button>
+            <button class="map-badge" id="toggle-predicted" type="button" aria-pressed="false">🔮 Predicted</button>
           </div>
         </div>
 
-        <!-- Stadium SVG -->
-          <div class="stadium-container" id="stadium-container">
-            <svg id="stadium-svg" viewBox="0 0 1000 760" role="img" aria-label="Interactive stadium heatmap"></svg>
-          </div>
+        <div class="stadium-container" id="stadium-container">
+          <svg id="stadium-svg" viewBox="0 0 1000 760" role="img" aria-label="Interactive stadium heatmap"></svg>
+        </div>
 
-        <!-- Legend -->
-        <div class="legend-bar">
+        <div class="legend-bar" aria-label="Heatmap legend">
           <span><i class="legend-swatch swatch-low"></i> Low</span>
           <span><i class="legend-swatch swatch-medium"></i> Medium</span>
           <span><i class="legend-swatch swatch-high"></i> High</span>
@@ -198,7 +221,6 @@
           <span><i class="legend-swatch swatch-route"></i> Route</span>
         </div>
 
-        <!-- Zone Spotlight -->
         <div class="zone-spotlight" id="zone-spotlight">
           <div>
             <span class="panel-kicker">Zone Spotlight</span>
@@ -211,29 +233,27 @@
             <div class="spotlight-stat"><span>Velocity</span><strong>--</strong></div>
           </div>
           <div class="sparkline-container" id="sparkline-container"></div>
-          <p class="spotlight-summary" id="spotlight-summary">Click any zone on the stadium map to inspect live movement conditions.</p>
+          <p class="spotlight-summary" id="spotlight-summary">
+            Click any zone on the stadium map to inspect live movement conditions.
+          </p>
         </div>
       </section>
 
       <!-- ====== RIGHT: Operator Dashboard ====== -->
-      <section class="panel panel-operator" id="panel-operator">
+      <section class="panel panel-operator" id="panel-operator" aria-labelledby="command-control-title">
         <div class="panel-header">
           <div class="panel-header-left">
             <span class="panel-kicker">Operator Intelligence</span>
-            <h2>Command & Control</h2>
+            <h2 id="command-control-title">Command &amp; Control</h2>
           </div>
           <span class="badge badge-amber" id="anomaly-count">0 alerts</span>
         </div>
 
-        <!-- Priority Anomalies -->
         <div class="section-card">
-          <div class="section-card-header">
-            <h3>Priority Anomalies</h3>
-          </div>
+          <div class="section-card-header"><h3>Priority Anomalies</h3></div>
           <div id="anomaly-list" class="empty-state">No active anomalies. Venue is stable.</div>
         </div>
 
-        <!-- Cluster Trends -->
         <div class="section-card">
           <div class="section-card-header">
             <h3>Cluster Trends</h3>
@@ -242,7 +262,6 @@
           <div id="cluster-list" class="empty-state">Cluster data loading...</div>
         </div>
 
-        <!-- System Recommendations -->
         <div class="section-card">
           <div class="section-card-header">
             <h3>AI Recommendations</h3>
@@ -251,39 +270,40 @@
           <div id="recommendation-list" class="empty-state">Recommendations loading...</div>
         </div>
 
-        <!-- AI Chat -->
         <div class="section-card chat-section">
           <div class="section-card-header">
             <h3>FlowSync Copilot</h3>
             <span class="badge badge-purple">AI</span>
           </div>
-          <div id="chat-messages" class="chat-messages"></div>
+          <div id="chat-messages" class="chat-messages" aria-live="polite"></div>
           <div class="chat-input-row">
-            <input type="text" id="chat-input" placeholder="Ask about congestion, exits, or routes..." aria-label="Chat input">
-            <button id="send-chat-btn" class="btn-send" aria-label="Send chat message">Send</button>
+            <label for="chat-input" class="sr-only">Ask about congestion, exits, or routes</label>
+            <input type="text" id="chat-input" placeholder="Ask about congestion, exits, or routes..." aria-label="Chat input" />
+            <button id="send-chat-btn" class="btn-send" type="button" aria-label="Send chat message">Send</button>
           </div>
         </div>
       </section>
-
     </main>
 
     <!-- ============ BOTTOM CONTROL BAR ============ -->
-    <footer class="control-bar" id="control-bar">
+    <footer class="control-bar" id="control-bar" role="contentinfo">
       <div class="control-bar-left">
         <span class="badge badge-ghost">🏟️ VENUE OPS</span>
         <span class="sim-badge" id="total-zones">-- zones</span>
       </div>
+
       <div class="control-bar-center">
         <div class="time-slider-group">
-          <span class="time-slider-label">Timeline</span>
-          <input type="range" class="time-slider" id="time-slider" min="-10" max="10" value="0" step="1">
+          <label class="time-slider-label" for="time-slider">Timeline</label>
+          <input type="range" class="time-slider" id="time-slider" min="-10" max="10" value="0" step="1" />
           <span class="time-slider-value" id="time-slider-value">Now</span>
         </div>
       </div>
+
       <div class="control-bar-right">
         <div class="whatif-toggle" id="whatif-toggle">
           <label class="toggle-label">
-            <input type="checkbox" id="whatif-checkbox">
+            <input type="checkbox" id="whatif-checkbox" />
             <span class="whatif-label">What-If Mode</span>
           </label>
         </div>
@@ -292,8 +312,8 @@
     </footer>
   </div>
 
-  <script src="security.js"></script>
-  <script src="accessibility.js"></script>
-  <script src="script.js"></script>
+  <script src="security.js" defer></script>
+  <script src="accessibility.js" defer></script>
+  <script src="script.js" defer></script>
 </body>
 </html>
