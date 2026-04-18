@@ -15,6 +15,7 @@ function getDomPurify() {
   try {
     domPurify = require('isomorphic-dompurify');
   } catch (error) {
+    console.warn('input-sanitizer: isomorphic-dompurify unavailable, falling back to xss-only sanitization');
     domPurify = null;
   }
 
