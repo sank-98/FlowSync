@@ -1351,6 +1351,7 @@ function start() {
   }
 
   const server = app.listen(PORT, HOST, () => {
+    // Guard against duplicate startup invocations in tests or hot-reload-like runtimes.
     if (simulationInterval) {
       clearInterval(simulationInterval);
     }
@@ -1374,7 +1375,7 @@ function start() {
 if (require.main === module) {
   try {
     start();
-  } catch (_error) {
+  } catch {
     process.exit(1);
   }
 }
