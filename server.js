@@ -1,3 +1,25 @@
+/**
+ * ============================================================================
+ * FlowSync - Real-Time Crowd Intelligence & Dynamic Routing Platform
+ * 
+ * A sophisticated venue intelligence system for large-scale spaces using
+ * predictive analytics, AI-powered routing, and real-time crowd management.
+ * 
+ * Features:
+ * - Live crowd visualization with SVG heatmap (28 zones)
+ * - A* pathfinding with multi-factor weighted optimization
+ * - Predictive analytics (10-15 minute forecast)
+ * - Real-time anomaly detection
+ * - Time arbitrage analysis engine
+ * - Google Gemini AI integration with intelligent fallback
+ * - Comprehensive security (HTTPS, CSRF, rate limiting, CSP headers)
+ * - Full WCAG 2.1 AA accessibility compliance
+ * 
+ * @version 1.0.0
+ * @author FlowSync Team
+ * @license MIT
+ * ============================================================================
+ */
 const express = require('express');
 const dotenv = require('dotenv');
 const path = require('path');
