@@ -29,6 +29,7 @@ validateEnvironment();
 
 const app = express();
 const PORT = Number(process.env.PORT || 8080);
+const HOST = '0.0.0.0';
 const googleServices = createGoogleServices();
 const adminRouteAuth =
   process.env.NODE_ENV === 'production' || process.env.ENABLE_ADMIN_ROUTE_AUTH === 'true'
@@ -128,6 +129,7 @@ let isSimulationRunning = true;
 let eventPulse = 0;
 let lastAnomalies = [];
 let activeRouteReservations = new Map();
+let simulationInterval;
 
 /**
  * Constructs the complete venue blueprint with all zones and their relationships.
@@ -1336,19 +1338,46 @@ app.use(errorHandler);
  * @returns {Object} Node HTTP server instance
  */
 function start() {
-  initializeStadium();
+  googleServices.cloudLogger.logInfo('Starting FlowSync server', { port: PORT, host: HOST });
 
-  setInterval(() => {
-    updateSimulation();
-  }, SIMULATION_CONFIG.updateInterval);
+  try {
+    initializeStadium();
+  } catch (error) {
+    googleServices.cloudLogger.logError('Failed to initialize simulation state during startup', error, {
+      port: PORT,
+      host: HOST,
+    });
+    throw error;
+  }
 
-  return app.listen(PORT, () => {
-    googleServices.cloudLogger.logInfo(`FlowSync live at http://localhost:${PORT}`);
+  const server = app.listen(PORT, HOST, () => {
+    // Guard against duplicate startup invocations in tests or hot-reload-like runtimes.
+    if (simulationInterval) {
+      clearInterval(simulationInterval);
+    }
+    simulationInterval = setInterval(() => {
+      updateSimulation();
+    }, SIMULATION_CONFIG.updateInterval);
+
+    googleServices.cloudLogger.logInfo(`FlowSync live at http://${HOST}:${PORT}`, { port: PORT, host: HOST });
   });
+
+  server.on('error', (error) => {
+    googleServices.cloudLogger.logError('Server startup failed', error, { port: PORT, host: HOST });
+    if (require.main === module) {
+      process.exit(1);
+    }
+  });
+
+  return server;
 }
 
 if (require.main === module) {
-  start();
+  try {
+    start();
+  } catch {
+    process.exit(1);
+  }
 }
 
 module.exports = { app, start, initializeStadium, googleServices };
