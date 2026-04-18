@@ -2,10 +2,23 @@ const jwt = require('jsonwebtoken');
 const { authGuard, requireRole } = require('../middleware/auth-guard');
 const inputSanitizer = require('../middleware/input-sanitizer');
 const errorHandler = require('../middleware/error-handler');
+const { sanitizeContext } = require('../middleware/logger');
+const { validateEnvironment } = require('../config/env-validator');
 const config = require('../config');
 
 describe('new production security/config files', () => {
   describe('authGuard', () => {
+    const originalEnv = process.env;
+
+    beforeEach(() => {
+      jest.resetModules();
+      process.env = { ...originalEnv };
+    });
+
+    afterAll(() => {
+      process.env = originalEnv;
+    });
+
     test('rejects missing authorization header', () => {
       const req = { headers: {} };
       const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
@@ -32,6 +45,33 @@ describe('new production security/config files', () => {
       expect(next).toHaveBeenCalled();
       expect(req.user.id).toBe('user-1');
       expect(req.user.roles).toEqual(['admin']);
+    });
+
+    test('accepts OAuth bearer token format', () => {
+      const req = { headers: { authorization: 'Bearer ya29.sampleOAuthTokenForTestingOnly' } };
+      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+      const next = jest.fn();
+
+      authGuard(req, res, next);
+
+      expect(next).toHaveBeenCalled();
+      expect(req.user.provider).toBe('oauth');
+    });
+
+    test('returns safe misconfiguration response when JWT secret is missing', () => {
+      delete process.env.JWT_SECRET;
+      const token = jwt.sign({ sub: 'user-1' }, 'temporary-secret', { expiresIn: '1h' });
+      const req = { headers: { authorization: `Bearer ${token}` } };
+      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+      const next = jest.fn();
+
+      authGuard(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'Authentication unavailable' })
+      );
+      expect(next).not.toHaveBeenCalled();
     });
 
     test('requireRole enforces role authorization', () => {
@@ -97,6 +137,40 @@ describe('new production security/config files', () => {
           simulation: expect.any(Object),
         })
       );
+    });
+  });
+
+  describe('env validator', () => {
+    const originalEnv = process.env;
+
+    beforeEach(() => {
+      process.env = { ...originalEnv };
+    });
+
+    afterAll(() => {
+      process.env = originalEnv;
+    });
+
+    test('throws in production when required env vars are missing', () => {
+      process.env.NODE_ENV = 'production';
+      delete process.env.JWT_SECRET;
+      delete process.env.CSRF_SECRET;
+
+      expect(() => validateEnvironment()).toThrow(/Missing required environment variables/);
+    });
+  });
+
+  describe('logger sanitization', () => {
+    test('redacts sensitive keys recursively', () => {
+      const sanitized = sanitizeContext({
+        token: 'abc123',
+        nested: { password: 'secret-value' },
+        safe: 'ok',
+      });
+
+      expect(sanitized.token).toBe('[REDACTED]');
+      expect(sanitized.nested.password).toBe('[REDACTED]');
+      expect(sanitized.safe).toBe('ok');
     });
   });
 });

@@ -1,128 +1,78 @@
 const request = require('supertest');
-const app = require('../app');
+const { app, initializeStadium } = require('../server');
 
-describe('OWASP Top 10 Defenses', () => {
-  // 1) Input validation
-  describe('Input validation', () => {
-    it('should reject XSS payload', async () => {
-      const res = await request(app).post('/endpoint').send({ data: '<script>alert(1)</script>' });
+describe('OWASP-aligned security hardening', () => {
+  let fromZoneId;
+
+  beforeAll(async () => {
+    initializeStadium();
+    const zonesRes = await request(app).get('/api/zones');
+    fromZoneId = zonesRes.body.zones[0].id;
+  });
+
+  describe('Input validation and sanitization', () => {
+    it('rejects suspicious SQL-like payloads', async () => {
+      const res = await request(app)
+        .post('/api/route')
+        .send({ fromZoneId: `${fromZoneId}; DROP TABLE zones;`, destinationType: 'food' });
+
       expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/unsafe|validation/i);
     });
-    it('should reject SQL injection attempt', async () => {
-      const res = await request(app).post('/endpoint').send({ data: "' OR 1=1; --" });
+
+    it('returns validation error for missing required route fields', async () => {
+      const res = await request(app).post('/api/route').send({});
+
       expect(res.status).toBe(400);
+      expect(res.body.error).toBe('Validation failed');
     });
-    it('should validate CSRF token', async () => {
-      const res = await request(app).post('/endpoint').set('X-CSRF-Token', 'invalid-token');
-      expect(res.status).toBe(403);
-    });
-  });
 
-  // 2) Authentication
-  describe('Authentication', () => {
-    it('should reject missing bearer token', async () => {
-      const res = await request(app).get('/protected-endpoint');
-      expect(res.status).toBe(401);
-    });
-    it('should reject invalid JWT', async () => {
-      const res = await request(app).get('/protected-endpoint').set('Authorization', 'Bearer invalidtoken');
-      expect(res.status).toBe(401);
-    });
-    it('should reject expired token', async () => {
-      const res = await request(app).get('/protected-endpoint').set('Authorization', 'Bearer expiredtoken');
-      expect(res.status).toBe(401);
-    });
-  });
+    it('accepts valid route payload and returns route data', async () => {
+      const res = await request(app)
+        .post('/api/route')
+        .send({ fromZoneId, destinationType: 'food', preference: 'balanced' });
 
-  // 3) Rate limiting
-  describe('Rate limiting', () => {
-    it('should reject consecutive requests exceeding limit', async () => {
-      for (let i = 0; i < 11; i++) {
-        await request(app).get('/rate-limited-endpoint');
-      }
-      const res = await request(app).get('/rate-limited-endpoint');
-      expect(res.status).toBe(429);
-    });
-  });
-
-  // 4) Security headers
-  describe('Security headers', () => {
-    it('should set CSP header', async () => {
-      const res = await request(app).get('/');
-      expect(res.headers['content-security-policy']).toBeDefined();
-    });
-    it('should set X-Frame-Options header', async () => {
-      const res = await request(app).get('/');
-      expect(res.headers['x-frame-options']).toBe('DENY');
-    });
-    it('should set X-Content-Type-Options header', async () => {
-      const res = await request(app).get('/');
-      expect(res.headers['x-content-type-options']).toBe('nosniff');
-    });
-    it('should set Strict-Transport-Security header', async () => {
-      const res = await request(app).get('/');
-      expect(res.headers['strict-transport-security']).toBeDefined();
-    });
-  });
-
-  // 5) SQL Injection
-  describe('SQL Injection', () => {
-    it('should use parameterized queries', async () => {
-      const res = await request(app).post('/sql-injection-endpoint').send({ query: 'SELECT * FROM users WHERE id = ?' });
       expect(res.status).toBe(200);
+      expect(res.body.route).toBeDefined();
     });
   });
 
-  // 6) CORS validation
-  describe('CORS validation', () => {
-    it('should check origin', async () => {
-      const res = await request(app).options('/endpoint').set('Origin', 'http://malicious.com');
+  describe('Security headers', () => {
+    it('sets strict security headers', async () => {
+      const res = await request(app).get('/');
+
+      expect(res.headers['content-security-policy']).toBeDefined();
+      expect(res.headers['x-frame-options']).toBe('DENY');
+      expect(res.headers['x-content-type-options']).toBe('nosniff');
+      expect(res.headers['strict-transport-security']).toBeDefined();
+      expect(res.headers['referrer-policy']).toBeDefined();
+    });
+  });
+
+  describe('Rate limiting and CORS', () => {
+    it('returns rate limit headers for API traffic', async () => {
+      const res = await request(app).get('/api/zones');
+      expect(res.headers['ratelimit-policy']).toBeDefined();
+    });
+
+    it('blocks disallowed CORS origins', async () => {
+      const res = await request(app).options('/api/zones').set('Origin', 'http://malicious.com');
       expect(res.status).toBe(403);
     });
   });
 
-  // 7) Helmet middleware verification
-  describe('Helmet middleware', () => {
-    it('should use helmet to secure app', async () => {
-      const res = await request(app).get('/');
-      expect(res.header['referrer-policy']).toBeDefined();
-    });
-  });
-
-  // 8) Sensitive data
-  describe('Sensitive data', () => {
-    it('should not expose API keys in response', async () => {
-      const res = await request(app).get('/api-key-endpoint');
-      expect(res.text).not.toContain('API_KEY');
-    });
-    it('should not show stack traces in production', async () => {
-      const res = await request(app).get('/error-endpoint');
-      expect(res.text).not.toContain('stack trace');
-    });
-  });
-
-  // 9) Route validation
-  describe('Route validation', () => {
-    it('should reject invalid zone IDs', async () => {
-      const res = await request(app).get('/zone/invalidID');
+  describe('Safe error surface', () => {
+    it('returns 404 for unknown endpoints without stack details', async () => {
+      const res = await request(app).get('/definitely-not-a-real-endpoint');
       expect(res.status).toBe(404);
+      expect(res.body.error).toBe('Endpoint not found');
+      expect(JSON.stringify(res.body)).not.toMatch(/stack|trace/i);
     });
-    it('should reject missing required fields', async () => {
-      const res = await request(app).post('/submit').send({});
-      expect(res.status).toBe(400);
-    });
-  });
 
-  // 10) Error handling
-  describe('Error handling', () => {
-    it('should return generic error messages', async () => {
-      const res = await request(app).get('/error');
-      expect(res.status).toBe(500);
-      expect(res.body.message).toBe('Internal Server Error');
-    });
-    it('should not leak information', async () => {
-      const res = await request(app).get('/error');
-      expect(res.text).not.toContain('Detailed Stack Trace');
+    it('rejects invalid zone identifiers', async () => {
+      const res = await request(app).get('/api/zones/not-a-real-zone');
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe('Zone not found');
     });
   });
 });

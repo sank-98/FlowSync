@@ -6,6 +6,9 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 require('express-async-errors');
 const securityConfig = require('./config/security-config');
 const { applySecurity } = require('./middleware/security');
+const { authGuard } = require('./middleware/auth-guard');
+const inputSanitizer = require('./middleware/input-sanitizer');
+const errorHandler = require('./middleware/error-handler');
 const {
   validateRouteRequest,
   validateChatRequest,
@@ -19,12 +22,18 @@ const { createStorageRouter } = require('./routes/storage');
 const { createTasksRouter } = require('./routes/tasks');
 const { createEventsRouter } = require('./routes/events');
 const apiRouter = require('./routes/api');
+const { validateEnvironment } = require('./config/env-validator');
 
 dotenv.config();
+validateEnvironment();
 
 const app = express();
 const PORT = Number(process.env.PORT || 8080);
 const googleServices = createGoogleServices();
+const adminRouteAuth =
+  process.env.NODE_ENV === 'production' || process.env.ENABLE_ADMIN_ROUTE_AUTH === 'true'
+    ? authGuard
+    : (_req, _res, next) => next();
 
 if (securityConfig.trustProxy) {
   app.set('trust proxy', 1);
@@ -33,6 +42,7 @@ app.use(express.json({ limit: securityConfig.request.maxJsonSize }));
 app.use(express.urlencoded({ extended: true, limit: securityConfig.request.maxUrlEncodedSize }));
 applySecurity(app);
 app.use(trackPerformance);
+app.use(inputSanitizer);
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(googleServices.cloudLogger.requestLoggingMiddleware);
 app.use((req, res, next) => {
@@ -1248,7 +1258,7 @@ app.get('/api/stats', (req, res) => {
  * Starts or stops the live simulation.
  * Body: { running: boolean }
  */
-app.post('/api/simulation', (req, res) => {
+app.post('/api/simulation', adminRouteAuth, (req, res) => {
   isSimulationRunning = Boolean(req.body.running);
   res.json({
     running: isSimulationRunning,
@@ -1261,7 +1271,7 @@ app.post('/api/simulation', (req, res) => {
  * Injects an event surge into the simulation to test anomaly detection.
  * Increases exit and zone densities to simulate end-of-event crowd movement.
  */
-app.post('/api/trigger-event-end', (req, res) => {
+app.post('/api/trigger-event-end', adminRouteAuth, (req, res) => {
   eventPulse = clamp(eventPulse + 0.85, 0, 1.2);
 
   zones.forEach((zone) => {
@@ -1282,7 +1292,7 @@ app.post('/api/trigger-event-end', (req, res) => {
  * POST /api/reset
  * Resets the simulation to its initial state.
  */
-app.post('/api/reset', (req, res) => {
+app.post('/api/reset', adminRouteAuth, (req, res) => {
   initializeStadium();
   res.json({
     message: 'Simulation reset successfully',
@@ -1294,10 +1304,7 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Endpoint not found' });
 });
 
-app.use((err, req, res, _next) => {
-  googleServices.cloudLogger.logError('Unhandled error', err, { path: req.path, method: req.method });
-  res.status(500).json({ error: 'Internal server error' });
-});
+app.use(errorHandler);
 
 /**
  * Starts the FlowSync server and begins simulation loop.
