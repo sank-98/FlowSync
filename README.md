@@ -5,7 +5,7 @@
 ---
 
 ## 📋 Overview
-**FlowSync** is a comprehensive real-time crowd intelligence and dynamic routing optimization platform engineered for large-scale venues including stadiums, airports, shopping malls, and convention centers. Built for the Google Prompt Wars 2024 Hackathon.
+**FlowSync** is a comprehensive real-time crowd intelligence and dynamic routing optimization platform engineered for large-scale venues including stadiums, airports, shopping malls, and convention centers.
 
 ### Key Capabilities
 * **Live Crowd Visualization:** Interactive SVG-based heatmap with 28 zones.
@@ -23,104 +23,60 @@
 | **Simulation Cycle** | 1.5 seconds per update |
 | **Routing Latency** | 48 milliseconds (average) |
 | **Prediction Window** | 10-15 minute forward-looking analytics |
-| **Repository Size** | 180 KB (highly optimized) |
+| **Test Coverage** | 95%+ with security & accessibility tests |
+| **Code Quality** | ESLint compliant with JSDoc |
 
 ---
 
 ## ⚠️ Problem Statement
 
 ### Challenges in Large Venue Management
-* **Crowd Safety & Congestion:** Uncontrolled accumulation leads to dangerous density. Bottlenecks create hazards during mass departures, and real-time visibility is often limited.
-* **Inefficient User Navigation:** Attendees lack real-time info. Static signage cannot adapt, leading users into congested zones due to suboptimal path choices.
-* **Operational Blindness:** Operators lack live zone-level distribution data and predictive capabilities, resulting in reactive rather than proactive management.
-* **Service Quality Degradation:** Unpredictable queues at facilities decrease satisfaction and extend overall event duration.
-
-### Impact of Current State
-Without real-time insights, venues experience safety incidents, poor attendee reviews, operational inefficiency, and an inability to optimize for peak periods.
+* **Crowd Safety & Congestion:** Uncontrolled accumulation leads to dangerous density.
+* **Inefficient User Navigation:** Attendees lack real-time info, leading to suboptimal choices.
+* **Operational Blindness:** Operators lack live zone-level distribution data.
+* **Service Quality Degradation:** Unpredictable queues decrease satisfaction.
 
 ### Quantified Impact with FlowSync
 
 | Metric | Improvement |
 |--------|-------------|
-| **Safety Incidents** | ↓ 65% (via predictive alerts) |
-| **Navigation Errors** | ↓ 78% (via A* routing) |
-| **Operational Response Time** | ↓ 52% (via real-time dashboard) |
-| **Average Queue Times** | ↓ 43% (via dynamic routing) |
-| **Attendee Satisfaction** | ↑ 34% (via better experience) |
-| **Staff Efficiency** | ↑ 41% (via intelligent alerts) |
+| **Safety Incidents** | ↓ 65% |
+| **Navigation Errors** | ↓ 78% |
+| **Response Time** | ↓ 52% |
+| **Queue Times** | ↓ 43% |
+| **Attendee Satisfaction** | ↑ 34% |
+| **Staff Efficiency** | ↑ 41% |
 
 ---
 
 ## ✨ Unique Solutions & Innovations
 
 ### 1. Multi-Dimensional Predictive Routing Engine
-🎯 **Innovation:** Advanced A* pathfinding with 5-factor weighted optimization.
-The routing engine uses a sophisticated cost function:
-$$MovementCost = BaseRingCost + (CurrentDensity \times Dw) + (PredictedDensity \times Pw) + (QueueTime \times Qw) + (CapacityPressure \times Cw) + (RouteReservation \times Rw)$$
-
-* **Preference-Based Modes:**
-    * **Fastest:** Minimizes travel time.
-    * **Least Crowded:** Avoids congestion for comfort.
-    * **Balanced:** Equilibrium approach.
-    * **Accessible:** Prioritizes ease of navigation.
-* **Route Reservation System:** Selected routes are "reserved" (with a decay mechanism) to prevent over-concentration in specific corridors.
+🎯 **A* pathfinding with 5-factor weighted optimization:**
+$$MovementCost = BaseRingCost + (CurrentDensity × Dw) + (PredictedDensity × Pw) + (QueueTime × Qw) + (CapacityPressure × Cw) + (RouteReservation × Rw)$$
 
 ### 2. Time Arbitrage Analysis Engine
-⏱️ **Innovation:** "Move Now vs. Wait & Later" Strategic Decision Framework.
-* **Scenario 1 (Move Now):** Travel immediately through current density.
-* **Scenario 2 (Wait & Travel):** Strategic delay (2-6 min) to travel through predicted cleared zones.
-* **Logic:** Selects the option providing the earliest arrival combined with the best user experience.
+⏱️ **"Move Now vs. Wait & Later" Strategic Decision Framework**
 
-### 3. Real-Time Anomaly Detection System
-🚨 **Innovation:** Multi-category classification with intelligent severity scoring.
-* **Crowd Spike:** Triggers when density increases >11%.
-* **Flow Stagnation:** Triggered when velocity < 0.3 and density > 62%.
-* **Critical Threshold:** Triggered when predicted density > 84%.
-* **Severity Formula:** `severity = clamp((trend_rate × 320) + (threshold_breach ? 28 : 0) + (stagnation ? 22 : 0) + (predicted_density × 42), 15, 100)`
+### 3. Real-Time Anomaly Detection
+🚨 **Multi-category classification with severity scoring**
 
-### 4. Context-Aware AI Integration (Google Gemini)
-🤖 **Innovation:** Two-tier system combining cloud AI with a sophisticated fallback.
-* **Tier 1:** Gemini API for nuanced, context-specific advice (90-word limit).
-* **Tier 2:** Intelligent Fallback using pattern-based logic (e.g., detecting keywords like 'route', 'food', 'exit') to ensure 100% uptime.
+### 4. AI Integration (Google Gemini)
+🤖 **Two-tier system with fallback pattern matching for 100% uptime**
 
-### 5. Physics-Inspired Crowd Dynamics Simulation
-🔬 **Innovation:** Model balancing accuracy with computational efficiency.
-* **Density Evolution:** Includes factors like Type Attraction (0.2-0.62), Ring Bias, Event Surges, and Network Pull.
-* **Velocity Calculation:** `velocity = clamp(1.24 - (density × 0.92) - max(trend_rate, 0) × 0.9, 0.08, 1.25)`
-
-### 6. Intelligent Spatial Zone Network
-🌍 **Innovation:** Concentric ring topology with smart neighbor discovery.
-* **Structure:** Outer Ring (Entry/Exit), Mid Ring (Food/Lounge), Inner Ring (Premium), and Core (Stage/Control).
-* **Neighbor Discovery:** Zones automatically calculate neighbors based on circumferential and radial distance metrics.
-
----
-
-## 🔄 System Workflow
-
-### End-to-End User Journey
-1.  **Venue Entry:** Location identified; live zone data loads.
-2.  **Intent:** User selects destination and routing preference.
-3.  **Calculation:** A* algorithm finds paths; route is reserved.
-4.  **Time Analysis:** System compares "Move Now" vs "Wait" and recommends.
-5.  **Navigation:** Turn-by-turn directions with 1.5s density updates.
-6.  **Arrival:** Feedback loop improves future predictive models.
-
-### Operator Dashboard Workflow
-* **Continuous Monitoring:** Heatmap updates, anomaly detection, and cluster trend analysis every 1.5 seconds.
-* **Incident Response:** Operators receive severity alerts and auto-resolution ETAs.
-* **Intervention:** Suggestions for queue management and traffic redirection.
+### 5. Physics-Inspired Crowd Dynamics
+🔬 **Balances accuracy with computational efficiency**
 
 ---
 
 ## 🛠 Technical Stack
 
-* **Backend:** Node.js 18+, Express.js 4.18.2 (RESTful JSON)
-* **Frontend:** HTML5, CSS3 (Glassmorphism), Vanilla JavaScript, SVG Visualization
-* **Cloud (Optional):** Firebase Firestore/Auth, Google Gemini Pro, Google Cloud Run
-* **Dev Tools:** ESLint, Jest, Supertest, npm, Git
-* **Design Patterns:** A* Pathfinding, Discrete-time State Machine, In-memory state caching
-* **Security:** HTTPS, CSRF protection, Rate limiting, Content Security Policy
-* **Accessibility:** WCAG 2.1 AA compliant, keyboard navigation, screen reader support
+* **Backend:** Node.js 18+, Express.js 4.18.2
+* **Frontend:** HTML5, CSS3, Vanilla JavaScript, SVG
+* **Cloud:** Firebase, Google Gemini, Google Cloud Run
+* **Security:** HTTPS, CSRF protection, Rate limiting, CSP headers
+* **Testing:** Jest, Supertest, Coverage reporting
+* **Accessibility:** WCAG 2.1 AA compliant
 
 ---
 
@@ -131,72 +87,9 @@ $$MovementCost = BaseRingCost + (CurrentDensity \times Dw) + (PredictedDensity \
 * Modern web browser
 
 ### Local Development
-1.  **Clone Repository:**
-    ```bash
-    git clone https://github.com/sank-98/FlowSync.git && cd FlowSync
-    ```
-2.  **Install Dependencies:**
-    ```bash
-    npm install
-    ```
-3.  **Environment Setup:**
-    ```bash
-    cp .env.example .env
-    # Add your GOOGLE_GEMINI_API_KEY and PORT in .env
-    ```
-4.  **Start Server:**
-    ```bash
-    npm start
-    ```
-5.  **Access:** Open `http://localhost:8080`
-
----
-
-## 📡 API Endpoints
-
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `GET` | `/health` | System status and simulation time |
-| `GET` | `/api/zones` | Retrieve all zone data and history |
-| `GET` | `/api/heatmap` | Live heatmap data for visualization |
-| `GET` | `/api/anomalies` | Detect active anomalies |
-| `GET` | `/api/dashboard` | Hero metrics and recommendations |
-| `GET` | `/api/stats` | Aggregate statistics |
-| `GET` | `/api/zones/:id` | Zone-specific data and neighbors |
-| `POST` | `/api/route` | Calculate A* path based on preferences |
-| `POST` | `/api/time-analysis` | Compare "Move Now" vs "Wait" |
-| `POST` | `/api/ai-chat` | Send message to Gemini/Fallback AI |
-| `POST` | `/api/simulation` | Toggle live simulation on/off |
-| `POST` | `/api/trigger-event-end` | Inject event surge |
-| `POST` | `/api/reset` | Reset simulation |
-
----
-
-## 📊 Performance & Quality
-* **Simulation Performance:** 28 zones processed every 1.5s; 48ms avg routing latency.
-* **Memory Footprint:** ~15-20 MB in-memory state.
-* **Test Coverage:** 95%+ coverage including health checks, routing logic, anomaly detection, accessibility.
-* **Code Quality:** ESLint compliant, JSDoc documented, production-ready.
-* **Security Score:** 97.5%+ with full HTTPS, CSRF, rate limiting, and security headers.
-* **Accessibility Score:** 96.25%+ with WCAG 2.1 AA compliance.
-
----
-
-## 🔐 Security, Accessibility, and Automation
-
-- **Security Middleware:** HTTPS redirect, CSRF protection, rate limiting, request validation
-- **Central Config:** Security config, logging config, performance monitoring
-- **Accessibility Support:** Skip links, live regions, ARIA labels, keyboard navigation
-- **Expanded Testing:** Unit, integration, security, and accessibility tests
-- **Deployment:** Cloud Run integration, health checks, monitoring setup
-- **Security Tooling:** SonarCloud, Snyk, ESLint security plugins
-
----
-
-## 🤝 Contributing & License
-Contributions are welcome! Please fork the repo and open a Pull Request.
-This project is licensed under the **MIT License**.
-
----
-
-**FlowSync** © 2024 — *Real-Time Crowd Intelligence Platform for Large-Scale Venues*
+```bash
+git clone https://github.com/sank-98/FlowSync.git && cd FlowSync
+npm install
+cp .env.example .env
+npm start
+# Open http://localhost:8080
