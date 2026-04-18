@@ -131,11 +131,13 @@ describe('google cloud services integration', () => {
     const res = await request(app).get('/health/services');
 
     expect([200, 503]).toContain(res.statusCode);
-    expect(res.body).toHaveProperty('services.cloudStorage');
-    expect(res.body).toHaveProperty('services.cloudLogging');
-    expect(res.body).toHaveProperty('services.cloudTasks');
-    expect(res.body).toHaveProperty('services.cloudMonitoring');
-    expect(res.body).toHaveProperty('services.cloudPubSub');
+    expect(res.body).toHaveProperty('services.storage');
+    expect(res.body).toHaveProperty('services.logging');
+    expect(res.body).toHaveProperty('services.tasks');
+    expect(res.body).toHaveProperty('services.monitoring');
+    expect(res.body).toHaveProperty('services.pubsub');
+    expect(res.body).toHaveProperty('timestamp');
+    expect(res.body).toHaveProperty('lastCheck');
   });
 
   it('supports cloud tasks and cloud events management routes', async () => {
@@ -149,5 +151,49 @@ describe('google cloud services integration', () => {
     const eventsResponse = await request(app).get('/api/events/topics');
     expect(eventsResponse.statusCode).toBe(200);
     expect(Array.isArray(eventsResponse.body.topics)).toBe(true);
+  });
+
+  it('supports storage metadata and event message listing routes', async () => {
+    const storageService = new CloudStorageService({ bucketName: 'test-bucket' });
+    storageService.getBucket = jest.fn(() => ({
+      file: jest.fn(() => ({
+        getMetadata: jest.fn().mockResolvedValue([
+          {
+            contentType: 'text/plain',
+            size: '10',
+            updated: '2026-01-01T00:00:00.000Z',
+            metadata: { uploadedBy: 'tester' },
+          },
+        ]),
+      })),
+    }));
+
+    const metadata = await storageService.getFileMetadata('test-file-id');
+    expect(metadata.metadata.uploadedBy).toBe('tester');
+
+    const pubSubService = new CloudPubSubService({ enabled: false });
+    await pubSubService.publishMessage('metrics-export', { latency: 42 });
+    const messages = pubSubService.getMessages('metrics-export');
+    expect(messages.length).toBe(1);
+    expect(messages[0].payload.latency).toBe(42);
+  });
+
+  it('acknowledges and nacks pubsub messages through helper methods', () => {
+    const pubSubService = new CloudPubSubService({ enabled: false });
+    const ack = jest.fn();
+    const nack = jest.fn();
+
+    expect(pubSubService.acknowledgeMessage({ ack })).toBe(true);
+    expect(ack).toHaveBeenCalledTimes(1);
+
+    const handled = pubSubService.handleMessageError(new Error('failed'), { nack });
+    expect(handled).toEqual({ handled: true, error: 'failed' });
+    expect(nack).toHaveBeenCalledTimes(1);
+
+    expect(pubSubService.acknowledgeMessage({})).toBe(false);
+    expect(pubSubService.handleMessageError(new Error('fallback'))).toEqual({
+      handled: true,
+      error: 'fallback',
+    });
   });
 });

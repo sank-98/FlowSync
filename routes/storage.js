@@ -84,6 +84,15 @@ function createStorageRouter(storageService) {
     }
   });
 
+  router.get('/metadata/:fileId', async (req, res, next) => {
+    try {
+      const metadata = await storageService.getFileMetadata(req.params.fileId);
+      return res.json(metadata);
+    } catch (error) {
+      return next(error);
+    }
+  });
+
   return router;
 }
 

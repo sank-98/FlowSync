@@ -80,6 +80,14 @@ $$MovementCost = BaseRingCost + (CurrentDensity × Dw) + (PredictedDensity × Pw
 
 ---
 
+## ☁️ Google Cloud Services
+
+- Storage, Logging, Tasks, Monitoring, and Pub/Sub integrations are available in the runtime.
+- Configure GCP settings using `.env.gcp.example` or the matching keys in `.env.example`.
+- See full setup and API docs: [`docs/GOOGLE_CLOUD_SERVICES.md`](docs/GOOGLE_CLOUD_SERVICES.md).
+
+---
+
 ## 🚀 Installation & Setup
 
 ### Prerequisites

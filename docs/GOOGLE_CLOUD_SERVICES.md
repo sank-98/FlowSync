@@ -17,6 +17,7 @@ FlowSync integrates the following Google Cloud services in the main server runti
 - `GET /api/storage/download/:fileId`
 - `DELETE /api/storage/delete/:fileId`
 - `GET /api/storage/list`
+- `GET /api/storage/metadata/:fileId`
 
 ### Tasks
 - `POST /api/tasks/create`
@@ -30,13 +31,14 @@ FlowSync integrates the following Google Cloud services in the main server runti
 - `POST /api/events/topics/:topic/publish`
 - `GET /api/events/topics`
 - `GET /api/events/subscribe/:topic`
+- `GET /api/events/messages/:topic`
 
 ### Health
 - `GET /health/services`
 - `GET /health-check/services`
 
 ## Setup
-1. Copy `.env.google-cloud.example` to `.env` and fill values.
+1. Copy `.env.gcp.example` to `.env` and fill values.
 2. Ensure a service account with access to Storage, Tasks, Monitoring, Logging, and Pub/Sub is available.
 3. Start service: `npm start`.
 

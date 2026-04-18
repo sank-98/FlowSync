@@ -5,11 +5,11 @@ function createHealthRouter(services = {}) {
 
   async function buildServiceHealth() {
     const checks = {
-      cloudStorage: services.storageService?.healthCheck,
-      cloudLogging: services.cloudLogger?.isCloudLoggingEnabled,
-      cloudTasks: services.tasksService?.healthCheck,
-      cloudMonitoring: services.cloudMonitoring?.isCloudMonitoringEnabled,
-      cloudPubSub: services.pubSubService?.isEnabled,
+      storage: services.storageService?.healthCheck,
+      logging: services.cloudLogger?.isCloudLoggingEnabled,
+      tasks: services.tasksService?.healthCheck,
+      monitoring: services.cloudMonitoring?.isCloudMonitoringEnabled,
+      pubsub: services.pubSubService?.isEnabled,
     };
 
     const result = {
@@ -26,13 +26,13 @@ function createHealthRouter(services = {}) {
 
       try {
         const health = await checker.call(
-          name === 'cloudStorage'
+          name === 'storage'
             ? services.storageService
-            : name === 'cloudTasks'
+            : name === 'tasks'
               ? services.tasksService
-              : name === 'cloudMonitoring'
+              : name === 'monitoring'
                 ? services.cloudMonitoring
-                : name === 'cloudPubSub'
+                : name === 'pubsub'
                   ? services.pubSubService
                   : services.cloudLogger
         );
@@ -58,9 +58,11 @@ function createHealthRouter(services = {}) {
   router.get('/services', async (_req, res) => {
     const details = await buildServiceHealth();
     const allConnected = Object.values(details.services).every((service) => service.connected === true);
+    const timestamp = new Date().toISOString();
     res.status(allConnected ? 200 : 503).json({
       status: allConnected ? 'healthy' : 'degraded',
-      lastHealthCheck: details.checkedAt,
+      timestamp,
+      lastCheck: details.checkedAt,
       services: details.services,
       performance: {
         uptimeSeconds: Math.round(process.uptime()),

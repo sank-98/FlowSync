@@ -8,6 +8,7 @@ const DEFAULT_TOPICS = [
   'metrics-export',
   'simulation-updates',
 ];
+const MAX_MESSAGE_HISTORY = 100;
 
 class CloudPubSubService {
   constructor(options = {}) {
@@ -16,18 +17,38 @@ class CloudPubSubService {
     this.pubsub = this.enabled ? new PubSub({ projectId: this.projectId || undefined }) : null;
     this.topics = options.topics || DEFAULT_TOPICS;
     this.fallbackBus = new EventEmitter();
+    this.messageHistory = new Map();
+    this.subscriptionPool = new Map();
+    this.subscriptionInits = new Map();
+  }
+
+  addToHistory(topicName, payload, attributes = {}, messageId) {
+    const current = this.messageHistory.get(topicName) || [];
+    const entry = {
+      messageId: messageId || `local-${Date.now()}`,
+      topic: topicName,
+      payload,
+      attributes,
+      publishedAt: new Date().toISOString(),
+    };
+    current.push(entry);
+    this.messageHistory.set(topicName, current.slice(-MAX_MESSAGE_HISTORY));
+    return entry.messageId;
   }
 
   async publishMessage(topicName, payload, attributes = {}) {
     const body = Buffer.from(JSON.stringify(payload));
 
     if (!this.pubsub) {
+      const messageId = this.addToHistory(topicName, payload, attributes);
       this.fallbackBus.emit(topicName, payload);
-      return `local-${Date.now()}`;
+      return messageId;
     }
 
     const topic = this.pubsub.topic(topicName);
-    return topic.publishMessage({ data: body, attributes });
+    const messageId = await topic.publishMessage({ data: body, attributes });
+    this.addToHistory(topicName, payload, attributes, messageId);
+    return messageId;
   }
 
   async subscribeToTopic(topicName, handler) {
@@ -38,14 +59,28 @@ class CloudPubSubService {
 
     const subscriptionName = `${topicName}-flowsync`;
     const topic = this.pubsub.topic(topicName);
-    const [subscription] = await topic.subscription(subscriptionName).get({ autoCreate: true });
+    let subscription = this.subscriptionPool.get(subscriptionName);
+    if (!subscription) {
+      try {
+        let initPromise = this.subscriptionInits.get(subscriptionName);
+        if (!initPromise) {
+          initPromise = topic.subscription(subscriptionName).get({ autoCreate: true });
+          this.subscriptionInits.set(subscriptionName, initPromise);
+        }
+
+        [subscription] = await initPromise;
+        this.subscriptionPool.set(subscriptionName, subscription);
+      } finally {
+        this.subscriptionInits.delete(subscriptionName);
+      }
+    }
 
     subscription.on('message', async (message) => {
       try {
         await this.messageHandler(message, handler);
-        message.ack();
+        this.acknowledgeMessage(message);
       } catch (error) {
-        message.nack();
+        this.handleMessageError(error, message);
       }
     });
 
@@ -64,6 +99,31 @@ class CloudPubSubService {
 
     const [topics] = await this.pubsub.getTopics();
     return topics.map((topic) => topic.name.split('/').pop());
+  }
+
+  getMessages(topicName) {
+    if (!topicName) {
+      return [];
+    }
+    return this.messageHistory.get(topicName) || [];
+  }
+
+  acknowledgeMessage(message) {
+    if (message && typeof message.ack === 'function') {
+      message.ack();
+      return true;
+    }
+    return false;
+  }
+
+  handleMessageError(error, message) {
+    if (message && typeof message.nack === 'function') {
+      message.nack();
+    }
+    return {
+      handled: true,
+      error: error?.message || 'unknown pubsub error',
+    };
   }
 
   isEnabled() {

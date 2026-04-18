@@ -132,6 +132,21 @@ class CloudStorageService {
     return { deleted: true, fileId };
   }
 
+  async getFileMetadata(fileId) {
+    if (!fileId) {
+      throw new Error('fileId is required');
+    }
+
+    const [metadata] = await this.getBucket().file(fileId).getMetadata();
+    return {
+      fileId,
+      contentType: metadata.contentType || 'application/octet-stream',
+      size: Number(metadata.size || 0),
+      updated: metadata.updated,
+      metadata: metadata.metadata || {},
+    };
+  }
+
   async listFiles(prefix = '') {
     const [files] = await this.getBucket().getFiles({ prefix: prefix || undefined });
 
