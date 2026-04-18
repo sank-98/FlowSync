@@ -4,23 +4,49 @@
  */
 
 const jwt = require('jsonwebtoken');
+const { logWarn } = require('./logger');
 
 const TOKEN_ALGORITHMS = ['HS256', 'RS256'];
+const OAUTH_TOKEN_PREFIXES = (process.env.OAUTH_TOKEN_PREFIXES || 'ya29.')
+  .split(',')
+  .map((prefix) => prefix.trim())
+  .filter(Boolean);
 
 function getJwtSecret() {
   const secret = process.env.JWT_SECRET;
 
   if (!secret) {
-    if (process.env.NODE_ENV === 'production') {
-      const error = new Error('JWT_SECRET is required in production');
-      error.statusCode = 500;
-      throw error;
-    }
-
-    return 'flowsync-dev-secret';
+    const error = new Error('JWT_SECRET is not configured');
+    error.statusCode = 500;
+    throw error;
   }
 
   return secret;
+}
+
+function isJwtToken(token) {
+  return token.split('.').length === 3;
+}
+
+function validateOAuthToken(token) {
+  if (!token || token.length < 20) {
+    return null;
+  }
+
+  const isKnownOAuthPrefix = OAUTH_TOKEN_PREFIXES.some((prefix) => token.startsWith(prefix));
+  const isGenericOpaqueToken = /^[A-Za-z0-9._-]{20,}$/.test(token);
+
+  if (!isKnownOAuthPrefix && !isGenericOpaqueToken) {
+    return null;
+  }
+
+  return {
+    id: null,
+    email: null,
+    roles: [],
+    provider: 'oauth',
+    rawToken: token,
+  };
 }
 
 function authGuard(req, res, next) {
@@ -43,22 +69,33 @@ function authGuard(req, res, next) {
   }
 
   try {
-    const decoded = jwt.verify(token, getJwtSecret(), { algorithms: TOKEN_ALGORITHMS });
+    if (isJwtToken(token)) {
+      const decoded = jwt.verify(token, getJwtSecret(), { algorithms: TOKEN_ALGORITHMS });
 
-    req.user = {
-      id: decoded.sub || decoded.id,
-      email: decoded.email,
-      roles: Array.isArray(decoded.roles) ? decoded.roles : [],
-      iat: decoded.iat ? new Date(decoded.iat * 1000) : null,
-      exp: decoded.exp ? new Date(decoded.exp * 1000) : null,
-    };
+      req.user = {
+        id: decoded.sub || decoded.id,
+        email: decoded.email,
+        roles: Array.isArray(decoded.roles) ? decoded.roles : [],
+        iat: decoded.iat ? new Date(decoded.iat * 1000) : null,
+        exp: decoded.exp ? new Date(decoded.exp * 1000) : null,
+        provider: 'jwt',
+      };
+    } else {
+      const oauthUser = validateOAuthToken(token);
+
+      if (!oauthUser) {
+        throw new jwt.JsonWebTokenError('Malformed OAuth token');
+      }
+
+      req.user = oauthUser;
+    }
 
     return next();
   } catch (error) {
     if (error.name === 'JsonWebTokenError') {
       return res.status(401).json({
         error: 'Unauthorized',
-        message: 'Invalid token signature',
+        message: 'Invalid token',
       });
     }
 
@@ -70,9 +107,10 @@ function authGuard(req, res, next) {
     }
 
     if (error.statusCode) {
+      logWarn('authGuard misconfiguration', { message: error.message });
       return res.status(error.statusCode).json({
         error: 'Unauthorized',
-        message: error.message,
+        message: 'Authentication unavailable',
       });
     }
 

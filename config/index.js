@@ -9,7 +9,17 @@ function toBoolean(value, fallback = false) {
     return fallback;
   }
 
-  return String(value).toLowerCase() === 'true';
+  const normalized = String(value).trim().toLowerCase();
+
+  if (['true', '1', 'yes', 'on'].includes(normalized)) {
+    return true;
+  }
+
+  if (['false', '0', 'no', 'off'].includes(normalized)) {
+    return false;
+  }
+
+  return fallback;
 }
 
 function toNumber(value, fallback) {
@@ -19,13 +29,15 @@ function toNumber(value, fallback) {
 
 function toList(value, fallback = []) {
   if (!value) {
-    return fallback;
+    return [...fallback];
   }
 
-  return String(value)
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean);
+  return [
+    ...String(value)
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean),
+  ];
 }
 
 const config = {
@@ -36,7 +48,7 @@ const config = {
     trustProxy: toBoolean(process.env.TRUST_PROXY, false),
   },
   security: {
-    jwtSecret: process.env.JWT_SECRET || 'flowsync-dev-secret',
+    jwtSecret: process.env.JWT_SECRET || '',
     corsOrigins: toList(process.env.CORS_ORIGIN, ['http://localhost:8080']),
     csrfEnabled: toBoolean(process.env.CSRF_ENABLED, true),
     csrfHeaderName: process.env.CSRF_HEADER_NAME || 'x-csrf-token',

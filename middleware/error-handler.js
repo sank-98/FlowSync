@@ -1,16 +1,17 @@
+const { logError } = require('./logger');
+
 /**
  * Centralized Error Handler Middleware
  * Returns consistent error responses and avoids leaking internal details in production.
  */
 
 function errorHandler(err, req, res, _next) {
-  console.error('Error:', {
+  logError('Unhandled request error', {
     message: err.message,
-    stack: err.stack,
     path: req.path,
     method: req.method,
     userId: req.user && req.user.id ? req.user.id : 'anonymous',
-    timestamp: new Date().toISOString(),
+    statusCode: err.statusCode || err.status || 500,
   });
 
   const statusCode = err.statusCode || err.status || 500;

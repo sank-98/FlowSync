@@ -71,7 +71,9 @@ function applySecurity(app) {
       origin(origin, callback) {
         if (!origin) return callback(null, true);
         if (securityConfig.cors.origin.includes(origin)) return callback(null, true);
-        return callback(new Error('CORS origin not allowed'));
+        const corsError = new Error('CORS origin not allowed');
+        corsError.statusCode = 403;
+        return callback(corsError);
       },
     })
   );

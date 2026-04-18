@@ -4,6 +4,7 @@
  */
 
 const xss = require('xss');
+const { logWarn } = require('./logger');
 
 let domPurify;
 
@@ -15,7 +16,7 @@ function getDomPurify() {
   try {
     domPurify = require('isomorphic-dompurify');
   } catch (error) {
-    console.warn('input-sanitizer: isomorphic-dompurify unavailable, falling back to xss-only sanitization');
+    logWarn('input-sanitizer fallback to xss-only sanitization');
     domPurify = null;
   }
 
@@ -43,6 +44,10 @@ function sanitizeValue(value) {
 
   if (value && typeof value === 'object') {
     return Object.keys(value).reduce((sanitized, key) => {
+      if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+        logWarn('input-sanitizer dropped unsafe object key', { key });
+        return sanitized;
+      }
       sanitized[key] = sanitizeValue(value[key]);
       return sanitized;
     }, {});

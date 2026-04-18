@@ -2,39 +2,38 @@
 
 ## System overview
 
-FlowSync is a Node.js/Express service for real-time venue intelligence, congestion analysis, and routing recommendations.
+FlowSync is a Node.js/Express service for real-time venue intelligence, routing, and simulation dashboards.
 
-## Module responsibilities
+## Runtime stack
 
-- `server.js`: app bootstrap, middleware chain, route registration.
-- `routes/`: HTTP route definitions and endpoint grouping.
-- `controllers/`: request orchestration and response shaping.
-- `services/`: simulation, cache, cloud integrations, and business logic.
-- `middleware/`: auth, sanitization, rate limiting, CSRF, and error handling.
-- `config/`: environment-driven runtime configuration.
+- **HTTP/API:** Express app in `server.js`
+- **Security middleware:**
+  - `middleware/security.js` (helmet, CORS, CSRF, rate limits)
+  - `middleware/auth-guard.js` (JWT + OAuth bearer validation)
+  - `middleware/input-sanitizer.js` (recursive request sanitization)
+  - `middleware/error-handler.js` (centralized safe responses)
+  - `middleware/logger.js` (sanitized structured middleware logging)
+- **Configuration:**
+  - `config/index.js` (typed env parsing)
+  - `config/env-validator.js` (production env guardrails)
+- **Services:** Cloud logging/monitoring/pubsub/storage/tasks + in-memory simulation/cache
 
-## Request/data flow
+## Request lifecycle
 
-1. Client request reaches Express.
-2. Security middleware validates/sanitizes input.
-3. Route handlers delegate to controller/service logic.
-4. Service layer updates simulation/cache/cloud state.
-5. Response is returned with standardized error handling.
+1. Request enters Express.
+2. Security headers/rate limits/CSRF checks are applied.
+3. Request body/query/params are sanitized.
+4. Route handlers execute simulation/service logic.
+5. Errors flow to centralized error middleware with non-leaking production responses.
 
-## Performance characteristics
+## Production safeguards
 
-- In-memory and distributed caching reduce repeated route/heatmap computation.
-- Simulation update loop uses bounded history to cap memory growth.
-- Compression and lightweight JSON payloads reduce transfer overhead.
+- Production boot fails fast if required env vars (for example `JWT_SECRET`, `CSRF_SECRET`) are missing.
+- Admin mutation endpoints (`/api/simulation`, `/api/trigger-event-end`, `/api/reset`) can enforce auth via production/default route guard.
+- Sensitive log fields are redacted by middleware logger utilities.
 
-## Deployment topology
+## Deployment model
 
-- Stateless app instances deployed on Cloud Run.
-- Optional managed services: Cloud Logging, Monitoring, Pub/Sub, Tasks, Storage.
-- Environment variables and Secret Manager control runtime behavior.
-
-## Security boundaries
-
-- AuthN/AuthZ enforced via middleware at API boundary.
-- Input sanitization and validation happen before business logic.
-- Central error handler prevents stack leakage in production.
+- Designed for stateless Cloud Run-style deployment.
+- Optional managed integrations: Cloud Logging, Monitoring, Pub/Sub, Tasks, and Storage.
+- Behavior is environment-driven via runtime variables.
