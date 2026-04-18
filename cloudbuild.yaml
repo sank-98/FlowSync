@@ -35,7 +35,7 @@ steps:
       - '--set-env-vars'
       - 'FIREBASE_PROJECT_ID=${_FIREBASE_PROJECT_ID},GOOGLE_GEMINI_API_KEY=${_GOOGLE_GEMINI_API_KEY}'
       - '--set-secrets'
-      - 'JWT_SECRET=projects/$PROJECT_ID/secrets/JWT_SECRET:latest,CSRF_SECRET=projects/$PROJECT_ID/secrets/CSRF_SECRET:latest'
+      - 'JWT_SECRET=projects/${PROJECT_ID}/secrets/JWT_SECRET:latest,CSRF_SECRET=projects/${PROJECT_ID}/secrets/CSRF_SECRET:latest'
       - '--max-instances=100'
       - '--memory=512Mi'
       - '--cpu=1'
