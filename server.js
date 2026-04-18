@@ -1,25 +1,3 @@
-/**
- * ============================================================================
- * FlowSync - Real-Time Crowd Intelligence & Dynamic Routing Platform
- * 
- * A sophisticated venue intelligence system for large-scale spaces using
- * predictive analytics, AI-powered routing, and real-time crowd management.
- * 
- * Features:
- * - Live crowd visualization with SVG heatmap (28 zones)
- * - A* pathfinding with multi-factor weighted optimization
- * - Predictive analytics (10-15 minute forecast)
- * - Real-time anomaly detection
- * - Time arbitrage analysis engine
- * - Google Gemini AI integration with intelligent fallback
- * - Comprehensive security (HTTPS, CSRF, rate limiting, CSP headers)
- * - Full WCAG 2.1 AA accessibility compliance
- * 
- * @version 1.0.0
- * @author FlowSync Team
- * @license MIT
- * ============================================================================
- */
 const express = require('express');
 const dotenv = require('dotenv');
 const path = require('path');
@@ -121,6 +99,12 @@ let eventPulse = 0;
 let lastAnomalies = [];
 let activeRouteReservations = new Map();
 
+/**
+ * Constructs the complete venue blueprint with all zones and their relationships.
+ * Creates 28 zones across 5 rings (outer, mid, inner) with specific types and capacities.
+ *
+ * @returns {Array<Object>} Array of zone objects with id, name, ring, radius, angle, type, capacity, and neighbors
+ */
 function buildVenueBlueprint() {
   const blueprint = [];
   const outerTypes = [
@@ -158,6 +142,17 @@ function buildVenueBlueprint() {
   }));
 }
 
+/**
+ * Creates a single zone template with geometric positioning and service characteristics.
+ *
+ * @param {string} ring - Ring level: 'outer', 'mid', or 'inner'
+ * @param {number} index - Zero-based index within the ring
+ * @param {number} total - Total zones in the ring
+ * @param {number} radius - Radial distance from center (0-1 normalized)
+ * @param {string} type - Zone type: 'entry', 'exit', 'food', 'restroom', 'medical', 'lounge', 'walkway'
+ * @param {number} capacity - Maximum occupancy for the zone
+ * @returns {Object} Zone template object with positioning and service data
+ */
 function makeZoneTemplate(ring, index, total, radius, type, capacity) {
   const angle = ((Math.PI * 2) / total) * index - Math.PI / 2;
   const id = `${ring}-${index + 1}`;
@@ -176,6 +171,14 @@ function makeZoneTemplate(ring, index, total, radius, type, capacity) {
   };
 }
 
+/**
+ * Discovers neighbor zones for path planning using circumferential and radial distance metrics.
+ * Each zone connects to its ring neighbors and closest zones in adjacent rings.
+ *
+ * @param {Object} zone - Target zone to find neighbors for
+ * @param {Array<Object>} allZones - All zones in the venue
+ * @returns {Array<string>} Array of neighbor zone IDs
+ */
 function buildNeighborIds(zone, allZones) {
   const inRing = allZones.filter((candidate) => candidate.ring === zone.ring);
   const ordered = [...inRing].sort((left, right) => left.angle - right.angle);
@@ -196,16 +199,37 @@ function buildNeighborIds(zone, allZones) {
   return [...new Set([previous.id, next.id, ...radialNeighbors])];
 }
 
+/**
+ * Normalizes angles to the range [-π, π] for consistent angular distance calculations.
+ *
+ * @param {number} angle - Angle in radians
+ * @returns {number} Normalized angle in [-π, π]
+ */
 function normalizeAngle(angle) {
   while (angle > Math.PI) angle -= Math.PI * 2;
   while (angle < -Math.PI) angle += Math.PI * 2;
   return Math.abs(angle);
 }
 
+/**
+ * Clamps a numeric value to a specified range [min, max].
+ *
+ * @param {number} value - Value to clamp
+ * @param {number} [min=0] - Minimum bound (default: 0)
+ * @param {number} [max=1] - Maximum bound (default: 1)
+ * @returns {number} Clamped value
+ */
 function clamp(value, min = 0, max = 1) {
   return Math.min(max, Math.max(min, value));
 }
 
+/**
+ * Calculates type-specific attraction scores for zones based on zone type and current event state.
+ * Used in crowd dynamics simulation to influence density evolution.
+ *
+ * @param {string} type - Zone type: 'entry', 'exit', 'food', 'restroom', 'medical', 'lounge'
+ * @returns {number} Attraction score in range [0.2, 0.62]
+ */
 function typeAttraction(type) {
   switch (type) {
     case 'entry':
@@ -225,6 +249,10 @@ function typeAttraction(type) {
   }
 }
 
+/**
+ * Initializes or resets the stadium simulation to its default state.
+ * Sets all zones to base densities and clears history, anomalies, and reservations.
+ */
 function initializeStadium() {
   simulationTime = 0;
   eventPulse = 0;
@@ -264,6 +292,12 @@ function initializeStadium() {
   });
 }
 
+/**
+ * Classifies pressure level based on predicted density threshold.
+ *
+ * @param {number} density - Zone density in range [0, 1]
+ * @returns {string} Pressure level: 'low', 'medium', 'high', or 'critical'
+ */
 function classifyPressure(density) {
   if (density >= 0.82) return 'critical';
   if (density >= 0.64) return 'high';
@@ -271,14 +305,31 @@ function classifyPressure(density) {
   return 'low';
 }
 
+/**
+ * Retrieves a zone object by its ID.
+ *
+ * @param {string} zoneId - Unique zone identifier
+ * @returns {Object|undefined} Zone object or undefined if not found
+ */
 function getZone(zoneId) {
   return zones.find((zone) => zone.id === zoneId);
 }
 
+/**
+ * Retrieves all neighboring zones for a given zone.
+ *
+ * @param {Object} zone - Zone object
+ * @returns {Array<Object>} Array of neighbor zone objects
+ */
 function getNeighbors(zone) {
   return zone.neighbors.map((neighborId) => getZone(neighborId)).filter(Boolean);
 }
 
+/**
+ * Updates the simulation state for one cycle (1.5 seconds).
+ * Recalculates density, velocity, queue times, and detects anomalies.
+ * Publishes metrics to Google Cloud Pub/Sub if enabled.
+ */
 function updateSimulation() {
   if (!isSimulationRunning) return;
 
@@ -360,6 +411,12 @@ function updateSimulation() {
   }
 }
 
+/**
+ * Detects anomalies in crowd behavior across all zones.
+ * Identifies density spikes, flow stagnation, and critical threshold breaches.
+ *
+ * @returns {Array<Object>} Array of anomaly objects sorted by severity (highest first)
+ */
 function detectAnomalies() {
   return zones
     .map((zone) => {
@@ -407,12 +464,26 @@ function detectAnomalies() {
     .sort((left, right) => right.severity - left.severity);
 }
 
+/**
+ * Calculates Euclidean distance between two zones after 2D projection.
+ *
+ * @param {Object} left - First zone
+ * @param {Object} right - Second zone
+ * @returns {number} Distance in projected space
+ */
 function euclideanDistance(left, right) {
   const leftPoint = projectZone(left);
   const rightPoint = projectZone(right);
   return Math.hypot(leftPoint.x - rightPoint.x, leftPoint.y - rightPoint.y);
 }
 
+/**
+ * Projects a zone's polar coordinates (angle, radius) into 2D Cartesian space.
+ * Used for distance calculations in pathfinding.
+ *
+ * @param {Object} zone - Zone with angle and radius properties
+ * @returns {Object} Object with x and y coordinates
+ */
 function projectZone(zone) {
   return {
     x: Math.cos(zone.angle) * zone.radius,
@@ -420,10 +491,24 @@ function projectZone(zone) {
   };
 }
 
+/**
+ * Heuristic function for A* pathfinding estimating cost to reach target from current zone.
+ *
+ * @param {Object} current - Current zone
+ * @param {Object} target - Target zone
+ * @returns {number} Estimated cost (heuristic)
+ */
 function heuristicCost(current, target) {
   return euclideanDistance(current, target) * 4.8;
 }
 
+/**
+ * Builds cost weight factors based on routing preference.
+ * Different preferences prioritize different aspects of route quality.
+ *
+ * @param {string} [preference='balanced'] - Routing preference: 'fastest', 'least_crowded', 'accessible', or 'balanced'
+ * @returns {Object} Weight factors for density, predicted density, queue, capacity, and reservation
+ */
 function buildCostWeights(preference = 'balanced') {
   if (preference === 'fastest') {
     return { density: 2.2, predicted: 2.1, queue: 0.8, capacity: 0.7, reservation: 1.2 };
@@ -440,6 +525,14 @@ function buildCostWeights(preference = 'balanced') {
   return { density: 2.9, predicted: 2.8, queue: 1, capacity: 1, reservation: 1.4 };
 }
 
+/**
+ * Calculates the movement cost for traversing a zone based on preference and current conditions.
+ * Higher cost discourages routing through congested or reserved zones.
+ *
+ * @param {Object} zone - Zone to calculate cost for
+ * @param {string} [preference='balanced'] - Routing preference
+ * @returns {number} Total movement cost
+ */
 function calculateMovementCost(zone, preference = 'balanced') {
   const weights = buildCostWeights(preference);
   const reservationCount = activeRouteReservations.get(zone.id) || 0;
@@ -456,12 +549,27 @@ function calculateMovementCost(zone, preference = 'balanced') {
   );
 }
 
+/**
+ * Reserves zones along a route to discourage other users from taking the same path.
+ * Reservations decay over simulation cycles.
+ *
+ * @param {Array<string>} route - Array of zone IDs in the route
+ */
 function reserveRoute(route) {
   route.forEach((zoneId) => {
     activeRouteReservations.set(zoneId, (activeRouteReservations.get(zoneId) || 0) + 2);
   });
 }
 
+/**
+ * Finds the optimal route from a source zone to a destination facility type using A* algorithm.
+ * Evaluates all destination options and selects the best based on routing preference.
+ *
+ * @param {string} fromZoneId - Starting zone ID
+ * @param {string} destinationType - Facility type: 'food', 'restroom', 'exit', etc.
+ * @param {string} [preference='balanced'] - Routing preference
+ * @returns {Object|null} Route result with path, destination, score, and confidence, or null if no route found
+ */
 function findOptimalRoute(fromZoneId, destinationType, preference = 'balanced') {
   const source = getZone(fromZoneId);
   const destinations = zones.filter((zone) => zone.type === destinationType);
@@ -496,6 +604,15 @@ function findOptimalRoute(fromZoneId, destinationType, preference = 'balanced') 
   };
 }
 
+/**
+ * A* pathfinding algorithm implementation.
+ * Finds the lowest-cost path from start zone to goal zone using heuristic guidance.
+ *
+ * @param {Object} start - Starting zone
+ * @param {Object} goal - Goal/destination zone
+ * @param {string} preference - Routing preference for cost calculation
+ * @returns {Array<string>|null} Array of zone IDs forming the path, or null if no path exists
+ */
 function aStarRoute(start, goal, preference) {
   const openSet = new Set([start.id]);
   const cameFrom = new Map();
@@ -542,6 +659,14 @@ function aStarRoute(start, goal, preference) {
   return null;
 }
 
+/**
+ * Reconstructs the complete path from A* algorithm result.
+ * Traces backwards from goal to start using the cameFrom map.
+ *
+ * @param {Map<string, string>} cameFrom - Map of zone ID to predecessor zone ID
+ * @param {string} currentId - Goal zone ID
+ * @returns {Array<string>} Array of zone IDs from start to goal
+ */
 function reconstructPath(cameFrom, currentId) {
   const route = [currentId];
   let cursor = currentId;
@@ -554,6 +679,14 @@ function reconstructPath(cameFrom, currentId) {
   return route;
 }
 
+/**
+ * Calculates a score for a route based on movement costs and congestion metrics.
+ * Lower scores indicate better routes.
+ *
+ * @param {Array<string>} route - Array of zone IDs in the route
+ * @param {string} preference - Routing preference
+ * @returns {number} Total route score
+ */
 function calculateRouteScore(route, preference) {
   return route.reduce((score, zoneId, index) => {
     const zone = getZone(zoneId);
@@ -568,6 +701,14 @@ function calculateRouteScore(route, preference) {
   }, 0);
 }
 
+/**
+ * Estimates travel time along a route in minutes.
+ * Accounts for current or predicted density, queue times, and zone velocity.
+ *
+ * @param {Array<string>} route - Array of zone IDs
+ * @param {boolean} [futureMode=false] - Use predicted density (true) or current (false)
+ * @returns {number} Estimated time in minutes (minimum 2)
+ */
 function calculateEstimatedTime(route, futureMode = false) {
   return Math.max(
     2,
@@ -582,6 +723,12 @@ function calculateEstimatedTime(route, futureMode = false) {
   );
 }
 
+/**
+ * Calculates confidence score for a route based on average zone prediction confidence.
+ *
+ * @param {Array<string>} route - Array of zone IDs
+ * @returns {number} Confidence score in range [0.5, 0.97]
+ */
 function calculateRouteConfidence(route) {
   if (!route.length) return 0.5;
   const averageConfidence =
@@ -589,6 +736,13 @@ function calculateRouteConfidence(route) {
   return clamp(averageConfidence, 0.5, 0.97);
 }
 
+/**
+ * Analyzes two time options for traveling a route: "Move Now" vs "Wait & Travel Later".
+ * Recommends the option resulting in earliest arrival.
+ *
+ * @param {Array<string>} route - Array of zone IDs
+ * @returns {Object} Analysis with goNow and waitThen options and recommendation
+ */
 function analyzeTimeOptions(route) {
   const now = calculateEstimatedTime(route, false);
   const later = calculateEstimatedTime(route, true);
@@ -608,6 +762,12 @@ function analyzeTimeOptions(route) {
   };
 }
 
+/**
+ * Generates exit strategy recommendation based on current exit zone density.
+ * Advises users whether to exit immediately or wait for conditions to improve.
+ *
+ * @returns {Object} Exit strategy with recommendation and wait time
+ */
 function getExitStrategy() {
   const exitZones = zones.filter((zone) => zone.type === 'exit');
   const averageExitDensity =
@@ -636,6 +796,12 @@ function getExitStrategy() {
   };
 }
 
+/**
+ * Generates a summary of all crowd clusters (ring-type combinations) with aggregate metrics.
+ * Sorted by predicted density (highest first).
+ *
+ * @returns {Array<Object>} Array of cluster summaries with density and velocity metrics
+ */
 function clusterSummary() {
   const clusters = new Map();
 
@@ -667,6 +833,12 @@ function clusterSummary() {
     .sort((left, right) => right.predicted - left.predicted);
 }
 
+/**
+ * Generates operational recommendations for venue operators.
+ * Identifies high-congestion zones, low-congestion alternatives, and facility balancing.
+ *
+ * @returns {Array<string>} Array of actionable recommendation strings
+ */
 function topRecommendations() {
   const sortedFood = zones
     .filter((zone) => zone.type === 'food')
@@ -689,6 +861,12 @@ function topRecommendations() {
   ].filter(Boolean);
 }
 
+/**
+ * Builds the complete dashboard data structure with all metrics, anomalies, and recommendations.
+ * Called on each API request to /api/dashboard.
+ *
+ * @returns {Object} Dashboard object with stats, anomalies, clusters, recommendations, and top zones
+ */
 function buildDashboard() {
   const overallDensity = Math.round(
     (zones.reduce((sum, zone) => sum + zone.density, 0) / Math.max(zones.length, 1)) * 100
@@ -733,6 +911,12 @@ function buildDashboard() {
   };
 }
 
+/**
+ * Builds minimal AI context for Gemini prompt or fallback response generation.
+ * Extracts key metrics and recommendations for AI consultation.
+ *
+ * @returns {Object} Context object with density, anomalies, exit strategy, and recommendations
+ */
 function buildAIContext() {
   const dashboard = buildDashboard();
   return {
@@ -744,6 +928,13 @@ function buildAIContext() {
   };
 }
 
+/**
+ * Generates contextual fallback response when Gemini API is unavailable.
+ * Pattern-matches user query to provide relevant operational guidance.
+ *
+ * @param {string} query - User query string
+ * @returns {string} Contextual response based on query intent
+ */
 function generateContextualFallback(query) {
   const context = buildAIContext();
   const lowerQuery = query.toLowerCase();
@@ -772,6 +963,14 @@ function generateContextualFallback(query) {
   return `FlowSync is tracking live density at ${context.overallDensity}% with predicted load ${context.predictedDensity}%. ${context.recommendations}`;
 }
 
+/**
+ * Retrieves AI response using Google Gemini API with fallback to pattern-based response.
+ * Sends venue context and user query to Gemini for nuanced advice.
+ * Falls back to generateContextualFallback on API error.
+ *
+ * @param {string} userQuery - User query string
+ * @returns {Promise<string>} AI response (max 90 words from Gemini, or fallback response)
+ */
 async function getAIResponse(userQuery) {
   if (!model) {
     return generateContextualFallback(userQuery);
@@ -799,6 +998,14 @@ async function getAIResponse(userQuery) {
   }
 }
 
+// ============================================================================
+// REST API ENDPOINTS
+// ============================================================================
+
+/**
+ * GET /health
+ * System health check endpoint. Returns basic status and simulation state.
+ */
 app.get('/health', (req, res) => {
   res.json({
     status: 'healthy',
@@ -837,6 +1044,10 @@ app.use('/api/storage', createStorageRouter(googleServices.storageService));
 app.use('/api/tasks', createTasksRouter(googleServices.tasksService));
 app.use('/api/events', createEventsRouter(googleServices.pubSubService));
 
+/**
+ * GET /api/zones
+ * Returns all zones with current density and status data.
+ */
 app.get('/api/zones', (req, res) => {
   res.json({
     zones,
@@ -845,6 +1056,10 @@ app.get('/api/zones', (req, res) => {
   });
 });
 
+/**
+ * GET /api/heatmap
+ * Returns simplified zone data optimized for heatmap visualization.
+ */
 app.get('/api/heatmap', (req, res) => {
   res.json({
     generatedAt: new Date().toISOString(),
@@ -861,6 +1076,10 @@ app.get('/api/heatmap', (req, res) => {
   });
 });
 
+/**
+ * GET /api/anomalies
+ * Returns currently detected anomalies with severity and category information.
+ */
 app.get('/api/anomalies', (req, res) => {
   res.json({
     anomalies: lastAnomalies,
@@ -868,6 +1087,11 @@ app.get('/api/anomalies', (req, res) => {
   });
 });
 
+/**
+ * GET /api/dashboard
+ * Returns comprehensive dashboard with metrics, anomalies, clusters, and recommendations.
+ * Cached for performance.
+ */
 app.get('/api/dashboard', (req, res) => {
   const cacheKey = 'dashboard';
   const cached = cacheManager.get(cacheKey);
@@ -879,6 +1103,10 @@ app.get('/api/dashboard', (req, res) => {
   return res.json(dashboard);
 });
 
+/**
+ * GET /api/zones/:id
+ * Returns detailed zone data including neighbors and historical density.
+ */
 app.get('/api/zones/:id', (req, res) => {
   const zone = getZone(req.params.id);
   if (!zone) {
@@ -898,6 +1126,11 @@ app.get('/api/zones/:id', (req, res) => {
   });
 });
 
+/**
+ * POST /api/route
+ * Calculates optimal route using A* algorithm with specified preference.
+ * Body: { fromZoneId, destinationType, preference? }
+ */
 app.post('/api/route', validateRouteRequest, validationErrorHandler, (req, res) => {
   const { fromZoneId, destinationType, preference } = req.body;
 
@@ -938,6 +1171,11 @@ app.post('/api/route', validateRouteRequest, validationErrorHandler, (req, res) 
   });
 });
 
+/**
+ * POST /api/time-analysis
+ * Analyzes "Move Now" vs "Wait & Travel Later" options for a route.
+ * Body: { route: [zoneIds] }
+ */
 app.post('/api/time-analysis', (req, res) => {
   const { route } = req.body;
 
@@ -948,10 +1186,19 @@ app.post('/api/time-analysis', (req, res) => {
   return res.json(analyzeTimeOptions(route));
 });
 
+/**
+ * GET /api/exit-strategy
+ * Returns current exit strategy based on exit zone density.
+ */
 app.get('/api/exit-strategy', (req, res) => {
   res.json(getExitStrategy());
 });
 
+/**
+ * POST /api/ai-chat
+ * Sends user query to Gemini AI with venue context. Falls back to pattern-based response.
+ * Body: { message: string }
+ */
 app.post('/api/ai-chat', validateChatRequest, validationErrorHandler, async (req, res) => {
   const response = await getAIResponse(req.body.message);
   return res.json({
@@ -960,6 +1207,10 @@ app.post('/api/ai-chat', validateChatRequest, validationErrorHandler, async (req
   });
 });
 
+/**
+ * GET /api/stats
+ * Returns summary statistics and publishes metrics to Cloud Monitoring and Pub/Sub.
+ */
 app.get('/api/stats', (req, res) => {
   const dashboard = buildDashboard();
   googleServices.cloudMonitoring
@@ -990,6 +1241,11 @@ app.get('/api/stats', (req, res) => {
   });
 });
 
+/**
+ * POST /api/simulation
+ * Starts or stops the live simulation.
+ * Body: { running: boolean }
+ */
 app.post('/api/simulation', (req, res) => {
   isSimulationRunning = Boolean(req.body.running);
   res.json({
@@ -998,6 +1254,11 @@ app.post('/api/simulation', (req, res) => {
   });
 });
 
+/**
+ * POST /api/trigger-event-end
+ * Injects an event surge into the simulation to test anomaly detection.
+ * Increases exit and zone densities to simulate end-of-event crowd movement.
+ */
 app.post('/api/trigger-event-end', (req, res) => {
   eventPulse = clamp(eventPulse + 0.85, 0, 1.2);
 
@@ -1015,6 +1276,10 @@ app.post('/api/trigger-event-end', (req, res) => {
   });
 });
 
+/**
+ * POST /api/reset
+ * Resets the simulation to its initial state.
+ */
 app.post('/api/reset', (req, res) => {
   initializeStadium();
   res.json({
@@ -1032,6 +1297,12 @@ app.use((err, req, res, _next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
+/**
+ * Starts the FlowSync server and begins simulation loop.
+ * Initializes the stadium and sets up 1.5-second update intervals.
+ *
+ * @returns {Object} Node HTTP server instance
+ */
 function start() {
   initializeStadium();
 
