@@ -4,7 +4,7 @@ const sqlPattern = /(union\s+select|drop\s+table|insert\s+into|delete\s+from|--|
 
 const validateRouteRequest = [
   body('fromZoneId').isString().trim().notEmpty(),
-  body('destinationType').isString().trim().isIn(['food', 'restroom', 'exit', 'lounge', 'medical']),
+  body('destinationType').isString().trim().notEmpty(),
   body('preference').optional().isString().trim().isIn(['balanced', 'fastest', 'least_crowded', 'accessible']),
 ];
 

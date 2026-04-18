@@ -34,6 +34,12 @@
   <a class="skip-link" href="#chat-input">Skip to chat</a>
 
   <div id="a11y-live-region" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+  <h1 class="sr-only">FlowSync Real-Time Crowd Intelligence Command Center</h1>
+  <nav class="sr-only" role="navigation" aria-label="Primary navigation">
+    <a href="#panel-routing">Smart Routing</a>
+    <a href="#panel-map">Live Crowd Heatmap</a>
+    <a href="#panel-operator">Command and Control</a>
+  </nav>
 
   <div class="app-shell" data-testid="app-shell">
     <!-- Ambient background -->
@@ -105,7 +111,7 @@
     </section>
 
     <!-- ============ MAIN DASHBOARD GRID ============ -->
-    <main class="dashboard-grid" id="dashboard-grid" tabindex="-1">
+    <main class="dashboard-grid" id="dashboard-grid" role="main" tabindex="-1">
       <!-- ====== LEFT: Smart Routing Panel ====== -->
       <section class="panel panel-routing" id="panel-routing" aria-labelledby="smart-routing-title">
         <div class="panel-header">
@@ -117,38 +123,44 @@
         </div>
 
         <div class="section-card" data-testid="routing-controls">
-          <div class="control-group">
-            <label for="current-zone">Your Zone</label>
-            <select id="current-zone" aria-label="Current zone">
-              <option value="">Select live position</option>
-            </select>
-          </div>
+          <form id="routing-form" aria-label="Smart routing form">
+            <fieldset>
+              <legend class="sr-only">Route planning controls</legend>
+              <div class="control-group">
+                <label for="current-zone">Your Zone</label>
+                <select id="current-zone" aria-label="Current zone" aria-describedby="routing-form-message" required aria-required="true">
+                  <option value="">Select live position</option>
+                </select>
+              </div>
 
-          <div class="control-group" style="margin-top:8px;">
-            <label for="destination">Destination</label>
-            <select id="destination" aria-label="Destination type">
-              <option value="">Choose destination</option>
-              <option value="food">🍕 Food Court</option>
-              <option value="restroom">🚻 Restroom</option>
-              <option value="exit">🚪 Exit</option>
-              <option value="lounge">🛋️ Lounge</option>
-              <option value="medical">🏥 Medical</option>
-            </select>
-          </div>
+              <div class="control-group" style="margin-top:8px;">
+                <label for="destination">Destination</label>
+                <select id="destination" aria-label="Destination type" aria-describedby="routing-form-message" required aria-required="true">
+                  <option value="">Choose destination</option>
+                  <option value="food">🍕 Food Court</option>
+                  <option value="restroom">🚻 Restroom</option>
+                  <option value="exit">🚪 Exit</option>
+                  <option value="lounge">🛋️ Lounge</option>
+                  <option value="medical">🏥 Medical</option>
+                </select>
+              </div>
 
-          <div class="control-group" style="margin-top:8px;">
-            <label for="preference">Optimization</label>
-            <select id="preference" aria-label="Route optimization preference">
-              <option value="balanced">⚖️ Balanced</option>
-              <option value="fastest">⚡ Fastest</option>
-              <option value="least_crowded">🌊 Least Crowded</option>
-              <option value="accessible">♿ Accessible</option>
-            </select>
-          </div>
+              <div class="control-group" style="margin-top:8px;">
+                <label for="preference">Optimization</label>
+                <select id="preference" aria-label="Route optimization preference" aria-describedby="routing-form-message" required aria-required="true">
+                  <option value="balanced">⚖️ Balanced</option>
+                  <option value="fastest">⚡ Fastest</option>
+                  <option value="least_crowded">🌊 Least Crowded</option>
+                  <option value="accessible">♿ Accessible</option>
+                </select>
+              </div>
 
-          <button id="get-route-btn" class="btn-primary" style="margin-top:10px;" type="button" aria-label="Generate route">
-            Generate Best Path
-          </button>
+              <button id="get-route-btn" class="btn-primary" style="margin-top:10px;" type="button" aria-label="Generate route" aria-disabled="false">
+                Generate Best Path
+              </button>
+            </fieldset>
+          </form>
+          <div id="routing-form-message" class="sr-only" role="alert" aria-live="polite" aria-atomic="true"></div>
         </div>
 
         <div class="section-card" id="route-result" aria-live="polite">
@@ -214,11 +226,13 @@
         </div>
 
         <div class="legend-bar" aria-label="Heatmap legend">
-          <span><i class="legend-swatch swatch-low"></i> Low</span>
-          <span><i class="legend-swatch swatch-medium"></i> Medium</span>
-          <span><i class="legend-swatch swatch-high"></i> High</span>
-          <span><i class="legend-swatch swatch-critical"></i> Critical</span>
-          <span><i class="legend-swatch swatch-route"></i> Route</span>
+          <ul>
+            <li><i class="legend-swatch swatch-low"></i> Low</li>
+            <li><i class="legend-swatch swatch-medium"></i> Medium</li>
+            <li><i class="legend-swatch swatch-high"></i> High</li>
+            <li><i class="legend-swatch swatch-critical"></i> Critical</li>
+            <li><i class="legend-swatch swatch-route"></i> Route</li>
+          </ul>
         </div>
 
         <div class="zone-spotlight" id="zone-spotlight">
@@ -278,12 +292,13 @@
           <div id="chat-messages" class="chat-messages" aria-live="polite"></div>
           <div class="chat-input-row">
             <label for="chat-input" class="sr-only">Ask about congestion, exits, or routes</label>
-            <input type="text" id="chat-input" placeholder="Ask about congestion, exits, or routes..." aria-label="Chat input" />
+            <input type="text" id="chat-input" placeholder="Ask about congestion, exits, or routes..." aria-label="Chat input" required aria-required="true" />
             <button id="send-chat-btn" class="btn-send" type="button" aria-label="Send chat message">Send</button>
           </div>
         </div>
       </section>
     </main>
+    <p class="sr-only">Animation and transition effects are tuned to support reduced-motion preferences.</p>
 
     <!-- ============ BOTTOM CONTROL BAR ============ -->
     <footer class="control-bar" id="control-bar" role="contentinfo">
@@ -313,7 +328,7 @@
   </div>
 
   <script src="security.js" defer></script>
-  <script src="accessibility.js" defer></script>
+  <script src="accessibility.js" defer data-keyboard-events="keydown Enter Space Escape"></script>
   <script src="script.js" defer></script>
 </body>
 </html>
