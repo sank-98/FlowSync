@@ -32,10 +32,12 @@ function toList(value, fallback = []) {
     return [...fallback];
   }
 
-  return String(value)
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean);
+  return [
+    ...String(value)
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean),
+  ];
 }
 
 const config = {

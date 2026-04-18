@@ -45,6 +45,7 @@ function sanitizeValue(value) {
   if (value && typeof value === 'object') {
     return Object.keys(value).reduce((sanitized, key) => {
       if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+        logWarn('input-sanitizer dropped unsafe object key', { key });
         return sanitized;
       }
       sanitized[key] = sanitizeValue(value[key]);

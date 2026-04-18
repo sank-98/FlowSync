@@ -7,6 +7,10 @@ const jwt = require('jsonwebtoken');
 const { logWarn } = require('./logger');
 
 const TOKEN_ALGORITHMS = ['HS256', 'RS256'];
+const OAUTH_TOKEN_PREFIXES = (process.env.OAUTH_TOKEN_PREFIXES || 'ya29.')
+  .split(',')
+  .map((prefix) => prefix.trim())
+  .filter(Boolean);
 
 function getJwtSecret() {
   const secret = process.env.JWT_SECRET;
@@ -29,10 +33,10 @@ function validateOAuthToken(token) {
     return null;
   }
 
-  const isGoogleLikeToken = token.startsWith('ya29.');
-  const isGenericOpaqueToken = /^[A-Za-z0-9\-._~+/]+=*$/.test(token);
+  const isKnownOAuthPrefix = OAUTH_TOKEN_PREFIXES.some((prefix) => token.startsWith(prefix));
+  const isGenericOpaqueToken = /^[A-Za-z0-9._-]{20,}$/.test(token);
 
-  if (!isGoogleLikeToken && !isGenericOpaqueToken) {
+  if (!isKnownOAuthPrefix && !isGenericOpaqueToken) {
     return null;
   }
 

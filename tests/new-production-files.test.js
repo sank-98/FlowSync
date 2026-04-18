@@ -60,7 +60,7 @@ describe('new production security/config files', () => {
 
     test('returns safe misconfiguration response when JWT secret is missing', () => {
       delete process.env.JWT_SECRET;
-      const token = jwt.sign({ sub: 'user-1' }, 'temporary-secret', { expiresIn: '1h' });
+      const token = 'header.payload.signature';
       const req = { headers: { authorization: `Bearer ${token}` } };
       const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
       const next = jest.fn();

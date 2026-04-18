@@ -10,7 +10,7 @@ function sanitizeContext(value) {
   if (value && typeof value === 'object') {
     return Object.keys(value).reduce((acc, key) => {
       const lower = key.toLowerCase();
-      if (SENSITIVE_KEYS.some((item) => lower.includes(item.toLowerCase()))) {
+      if (SENSITIVE_KEYS.some((item) => lower.includes(item))) {
         acc[key] = '[REDACTED]';
       } else {
         acc[key] = sanitizeContext(value[key]);
