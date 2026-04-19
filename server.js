@@ -1375,7 +1375,8 @@ function start() {
 if (require.main === module) {
   try {
     start();
-  } catch {
+  } catch (error) {
+    googleServices.cloudLogger.logError('Fatal startup failure', error, { port: PORT, host: HOST });
     process.exit(1);
   }
 }
