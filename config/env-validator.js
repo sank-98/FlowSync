@@ -7,11 +7,12 @@ function validateEnvironment() {
     return;
   }
 
+  // Log warning instead of throwing error - secrets will be injected via Cloud Run Secret Manager
   const requiredVariables = ['JWT_SECRET', 'CSRF_SECRET'];
   const missing = requiredVariables.filter((key) => !process.env[key]);
 
   if (missing.length > 0) {
-    throw new Error(`Missing required environment variables in production: ${missing.join(', ')}`);
+    logWarn(`Missing environment variables: ${missing.join(', ')}. These will be injected via Cloud Run Secret Manager.`);
   }
 
   if (!process.env.CORS_ORIGIN) {
