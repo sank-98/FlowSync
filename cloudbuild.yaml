@@ -39,7 +39,7 @@ steps:
       - '--max-instances=100'
       - '--memory=512Mi'
       - '--cpu=1'
-      - '--timeout=3600'
+      - '--timeout=900'
       - '--no-cpu-throttling'
       - '--cpu-boost'
 
